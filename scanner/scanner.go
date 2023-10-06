@@ -123,7 +123,7 @@ func (s *Scanner) scanToken() {
 		if unicode.IsDigit(c) {
 			s.tokenize_number()
 		} else if unicode.IsLetter(c) || c == '_' {
-			// identifier
+            s.tokenize_identifier()
 		} else {
 			errorhandling.Report(s.line, s.source[s.start:s.current], "Unexpected character.")
 		}
@@ -147,7 +147,7 @@ func (s *Scanner) tokenize_identifier() {
 
 	identifier = s.source[s.start:s.current]
 
-	if token.KeywordMap[identifier] == 0 {
+	if token.KeywordMap[identifier] != 0 {
 		s.addToken(token.KeywordMap[identifier])
 	} else {
 		s.addToken(token.IDENTIFIER)
@@ -228,6 +228,9 @@ func (s *Scanner) match(expected rune) bool {
 }
 
 func (s *Scanner) advance() rune {
+    if s.isAtEnd() {
+        return rune(0)
+    }
 	r := s.source[s.current]
 	s.current += 1
 
