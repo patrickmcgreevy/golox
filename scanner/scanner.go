@@ -134,7 +134,7 @@ func (s *Scanner) addToken(t token.TokenType) {
 	s.addTokenLiteral(t, nil)
 }
 
-func (s *Scanner) addTokenLiteral(t token.TokenType, literal *string) {
+func (s *Scanner) addTokenLiteral(t token.TokenType, literal any) {
 	text := s.source[s.start:s.current]
 	s.tokens = append(s.tokens, token.Token{Token_type: t, Lexeme: text, Literal: literal, Line: s.line})
 }

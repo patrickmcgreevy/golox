@@ -59,12 +59,8 @@ type Literal interface {
 type Token struct {
     Token_type TokenType
     Lexeme string
-    Literal *string
+    Literal any
     Line int
-}
-
-func (t Token) toString() string {
-    return string(t.Token_type) + " " + t.Lexeme + " " + *t.Literal
 }
 
 var KeywordMap = map[string]TokenType{
