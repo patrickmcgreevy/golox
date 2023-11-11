@@ -84,9 +84,21 @@ func (p *Parser) unary() expression.Expr {
 // primary        → NUMBER | STRING | "true" | "false" | "nil"
 //               | "(" expression ")"
 func (p *Parser) primary() expression.Expr {
+    if p.match(token.FALSE) {
+        return expression.Literal{Value: false}
+    }
+    if p.match(token.TRUE) {
+        return expression.Literal{Value: true}
+    }
+    if p.match(token.NIL) {
+        return expression.Literal{Value: nil}
+    }
+    if p.match(token.STRING, token.NUMBER) {
+        return expression.Literal{Value: p.previous().Literal}
+    }
     if p.match(token.LEFT_PAREN) {
         expr := p.expression()
-        p.advance()
+        token, err := p.consume(token.RIGHT_PAREN, "Expected right paren!")
 
         return expression.Grouping{Expr: expr}
     }
@@ -123,6 +135,15 @@ func (p *Parser) advance() token.Token {
 	return ret
 }
 
+func (p *Parser) consume(tokenType token.TokenType, message string) (token.Token, *ParseError) {
+    if p.check(tokenType) {
+        return p.advance(), nil
+    }
+    error := NewParseError(message)
+
+    return token.Token{}, &error
+}
+
 func (p Parser) peek() token.Token {
 	return p.tokens[p.current]
 }
@@ -133,4 +154,18 @@ func (p Parser) previous() token.Token {
 
 func (p Parser) isAtEnd() bool {
 	return p.peek().Token_type == token.EOF
+}
+
+type ParseError struct  {
+    error string
+}
+
+func (e *ParseError) Error() string {
+    return e.error
+}
+
+func NewParseError(message string) ParseError {
+    e := ParseError{error: message}
+
+    return e
 }
