@@ -37,6 +37,7 @@ const (
     CLASS
     ELSE
     FALSE
+    FOR
     FUN
     IF
     NIL

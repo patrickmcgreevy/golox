@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"golox/errorhandling"
 	"golox/expression"
+	"golox/parser"
 	"golox/scanner"
 	"golox/token"
 	"os"
+	// "runtime"
 )
 
 var hadError bool // Improvement idea: Implement an ErrorHandling interface so we can pass different strategies
@@ -101,7 +103,11 @@ func run(source string) {
 	for _, v := range tokens {
 		fmt.Println(v)
 	}
+    parser := parser.NewParser(tokens)
 
+    // runtime.Breakpoint()
+    expr, _ := parser.Expression()
+    fmt.Println(expr.Expand_to_string())
 }
 
 func raise_error(line int, message string) {

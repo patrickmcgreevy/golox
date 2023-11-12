@@ -78,6 +78,8 @@ func (e Literal) Expand_to_string() string {
 	switch v := e.Value.(type) {
 	case string:
 		return v
+    case *string:
+        return *v
 	case int:
 		return strconv.Itoa(v) 
     case float64:
