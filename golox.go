@@ -106,8 +106,10 @@ func run(source string) {
     parser := parser.NewParser(tokens)
 
     // runtime.Breakpoint()
-    expr, _ := parser.Expression()
-    fmt.Println(expr.Expand_to_string())
+    expr:= parser.Parse()
+    if expr != nil {
+        fmt.Println(expr.Expand_to_string())
+    }
 }
 
 func raise_error(line int, message string) {

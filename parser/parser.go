@@ -15,8 +15,12 @@ func NewParser(tokens []token.Token) Parser {
 	return Parser{tokens: tokens, current: 0}
 }
 
-func (p *Parser) Expression() (expression.Expr, *ParseError){
-    return p.expression()
+func (p *Parser) Parse() expression.Expr{
+    expr, err := p.expression()
+    if err != nil {
+        return nil
+    }
+    return expr
 }
 
 func (p *Parser) expression() (expression.Expr, *ParseError) {
