@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"golox/errorhandling"
 	"golox/expression"
+	"golox/interpreter"
 	"golox/parser"
 	"golox/scanner"
 	"golox/token"
@@ -31,6 +32,7 @@ func main() {
 }
 
 func test_expr() {
+    visitor := expression.ExpressionStringVisitor{}
 	expr := expression.Binary{
 		Left: expression.Binary{
 			Left: expression.Unary{
@@ -42,7 +44,10 @@ func test_expr() {
 		Right:    expression.Literal{Value: "def"},
 	}
 
-	fmt.Println(expr.Expand_to_string())
+	expr.Accept(&visitor)
+    fmt.Println(visitor.As_string())
+    visitor.Reset()
+
 
 	// Expr expression = new Expr.Binary(
 	//         new Expr.Unary(
@@ -64,8 +69,9 @@ func test_expr() {
 		},
 	}
 
-    fmt.Println(expr2.Expand_to_string())
-
+	expr2.Accept(&visitor)
+    fmt.Println(visitor.As_string())
+    visitor.Reset()
 }
 
 func runFile(path string) error {
@@ -99,6 +105,8 @@ func runPrompt() error {
 func run(source string) {
 	scanner := scanner.NewScanner(source)
 	tokens := scanner.ScanTokens()
+    expressionStringVisitor := expression.ExpressionStringVisitor{}
+    evalVisitor := interpreter.Interpreter{}
 
 	for _, v := range tokens {
 		fmt.Println(v)
@@ -108,7 +116,11 @@ func run(source string) {
     // runtime.Breakpoint()
     expr:= parser.Parse()
     if expr != nil {
-        fmt.Println(expr.Expand_to_string())
+        // fmt.Println(expr.Expand_to_string())
+        expr.Accept(&expressionStringVisitor)
+        fmt.Println(expressionStringVisitor.As_string())
+        fmt.Println(evalVisitor.Evaluate(expr))
+        expr = parser.Parse()
     }
 }
 

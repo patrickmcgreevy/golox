@@ -9,6 +9,7 @@ import (
 
 type Expr interface {
 	Expand_to_string() string
+    Accept(v Visitor)
 }
 
 func parenthesize(name string, exprs ...Expr) string {
@@ -29,23 +30,43 @@ type Assign struct {
 	Value Expr
 }
 
+func (e Assign) Accept(v Visitor) {
+    v.VisitAssign(e)
+}
+
 type Binary struct {
 	Left     Expr
 	Operator token.Token
 	Right    Expr
 }
 
+func (e Binary) Accept(v Visitor) {
+    v.VisitBinary(e)
+}
+
 type Grouping struct {
 	Expr Expr
+}
+
+func (e Grouping) Accept(v Visitor) {
+    v.VisitGrouping(e)
 }
 
 type Literal struct {
 	Value any
 }
 
+func (e Literal) Accept(v Visitor) {
+    v.VisitLiteral(e)
+}
+
 type Unary struct {
 	Operator token.Token
 	Right    Expr
+}
+
+func (e Unary) Accept(v Visitor) {
+    v.VisitUnary(e)
 }
 
 func (e Assign) Expand_to_string() string {
@@ -93,5 +114,75 @@ func (e Literal) Expand_to_string() string {
 
 func (e Unary) Expand_to_string() string {
     return parenthesize(e.Operator.Lexeme, e.Right)
+}
+
+type Visitor interface {
+    VisitAssign(e Assign)
+    VisitBinary(e Binary)
+    VisitGrouping(e Grouping)
+    VisitLiteral(e Literal)
+    VisitUnary(e Unary)
+}
+
+type ExpressionStringVisitor struct {
+    expr_string_builder strings.Builder
+}
+
+func (v *ExpressionStringVisitor) As_string() string {
+    return v.expr_string_builder.String()
+}
+
+func (v *ExpressionStringVisitor) Reset() {
+    v.expr_string_builder.Reset()
+}
+
+func (v *ExpressionStringVisitor) parenthesize(name string, exprs ...Expr) {
+    // v.expr_string_builder.WriteString(name)
+	v.expr_string_builder.WriteString("(")
+	v.expr_string_builder.WriteString(name)
+	for _, val := range exprs {
+		v.expr_string_builder.WriteString(" ")
+        val.Accept(v)
+	}
+	v.expr_string_builder.WriteString(")")
+}
+
+func (v *ExpressionStringVisitor) VisitAssign(e Assign) {
+	v.expr_string_builder.WriteString(e.Name.Lexeme)
+	v.expr_string_builder.WriteString(" = ")
+    e.Value.Accept(v)
+}
+
+func (v *ExpressionStringVisitor) VisitBinary(e Binary) {
+	v.parenthesize(e.Operator.Lexeme, e.Left, e.Right)
+}
+
+func (v *ExpressionStringVisitor) VisitGrouping(e Grouping) {
+	v.parenthesize("grouping", e.Expr)
+}
+
+func (v *ExpressionStringVisitor) VisitLiteral(e Literal) {
+	if e.Value == nil {
+		v.expr_string_builder.WriteString("nil")
+	}
+
+	switch val := e.Value.(type) {
+	case string:
+		v.expr_string_builder.WriteString(val)
+    case *string:
+         v.expr_string_builder.WriteString(*val)
+	case int:
+		 v.expr_string_builder.WriteString(strconv.Itoa(val))
+    case float64:
+        // return strconv.FormatFloat(v, 'f', 32, 64)
+        s := fmt.Sprintf("%f", val)
+        v.expr_string_builder.WriteString(s)
+	default:
+		panic("Unexpected type")
+	}
+}
+
+func (v *ExpressionStringVisitor) VisitUnary(e Unary) {
+    v.parenthesize(e.Operator.Lexeme, e.Right)
 }
 
