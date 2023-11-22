@@ -1,19 +1,21 @@
 package statement
 
-type statementVistitor interface {
-	visitBlockStmt(stmt Block)
-	visitClassStmt(stmt Class)
-	visitExpressionStmt(stmt Expression)
-	visitFunctionStmt(stmt Function)
-	visitIfStmt(stmt If)
-	visitPrintStmt(stmt Print)
-	visitReturnStmt(stmt Return)
-	visitVarStmt(stmt Var)
-	visitWhileStmt(stmt While)
+import "golox/expression"
+
+type StatementVisitor interface {
+	VisitBlockStmt(stmt Block)
+	VisitClassStmt(stmt Class)
+	VisitExpressionStmt(stmt Expression)
+	VisitFunctionStmt(stmt Function)
+	VisitIfStmt(stmt If)
+	VisitPrintStmt(stmt Print)
+	VisitReturnStmt(stmt Return)
+	VisitVarStmt(stmt Var)
+	VisitWhileStmt(stmt While)
 }
 
 type Statement interface {
-    accept(statementVistitor)
+    Accept(StatementVisitor)
 }
 
 type Block struct {
@@ -23,6 +25,15 @@ type Class struct {
 }
 
 type Expression struct {
+    Val expression.Expr
+}
+
+func NewExpressionStmt(val expression.Expr) Expression {
+    return Expression{Val: val}
+}
+
+func (s Expression) Accept(v StatementVisitor) {
+    v.VisitExpressionStmt(s)
 }
 
 type Function struct {
@@ -32,6 +43,15 @@ type If struct {
 }
 
 type Print struct {
+    Val expression.Expr
+}
+
+func NewPrintStmt(val expression.Expr) Print {
+    return Print{Val: val}
+}
+
+func (s Print) Accept(v StatementVisitor) {
+    v.VisitPrintStmt(s)
 }
 
 type Return struct {

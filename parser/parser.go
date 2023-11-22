@@ -3,8 +3,8 @@ package parser
 import (
 	"golox/errorhandling"
 	"golox/expression"
+	"golox/statement"
 	"golox/token"
-    "golox/statement"
 )
 
 type Parser struct {
@@ -16,18 +16,63 @@ func NewParser(tokens []token.Token) Parser {
 	return Parser{tokens: tokens, current: 0}
 }
 
-func (p *Parser) Parse() statement.Statement {
+func (p *Parser) Parse()  []statement.Statement {
     // expr, err := p.expression()
-    stmt, err := p.statement()
-    if err != nil {
-        return nil
+    // stmt, err := p.statement()
+    // if err != nil {
+    //     return nil
+    // }
+    // return stmt
+    statements := []statement.Statement{}
+    at_end := p.IsAtEnd()
+    for !at_end {
+        stmt, err := p.statement()
+        if err != nil {
+            return nil
+        }
+        statements = append(statements, stmt)
+        at_end = p.IsAtEnd()
     }
-    return stmt
+
+    return statements
 }
 
 func (p *Parser) statement() (statement.Statement, *ParseError) {
+    if p.match(token.PRINT) {
+        return p.printStatement()
+    }
+
+    return p.expressionStatement()
 }
 
+func (p *Parser) printStatement() (statement.Statement, *ParseError) {
+    var stmt statement.Statement
+    expr, err := p.expression()
+    if err != nil {
+        return stmt, err
+    }
+    _, err = p.consume(token.SEMICOLON, "Expected ';' after value.")
+    if err != nil {
+        // The semi colon after "false" is being consumed. I expect it's a scanning bug.
+        return stmt, err
+    }
+
+    return statement.NewPrintStmt(expr), nil
+}
+
+func (p *Parser) expressionStatement() (statement.Statement, *ParseError) {
+    var stmt statement.Statement
+    expr, err := p.expression()
+    if err != nil {
+        return stmt, err
+    }
+    _, err = p.consume(token.SEMICOLON, "Expected ';' after statement.")
+    if err != nil {
+        return stmt, err
+    }
+
+    return statement.NewExpressionStmt(expr), nil
+}
 
 
 func (p *Parser) expression() (expression.Expr, *ParseError) {

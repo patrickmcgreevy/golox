@@ -143,7 +143,8 @@ func (s *Scanner) addTokenLiteral(t token.TokenType, literal any) {
 func (s *Scanner) tokenize_identifier() {
 	var identifier string
 
-	for c := s.peek(); unicode.IsDigit(c) || unicode.IsLetter(c) || c == '_'; c = s.advance() {
+	for c := s.peek(); unicode.IsDigit(c) || unicode.IsLetter(c) || c == '_'; c = s.peek(){
+         s.advance() 
 	}
 
 	identifier = s.source[s.start:s.current]

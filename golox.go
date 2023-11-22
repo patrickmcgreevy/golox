@@ -15,7 +15,7 @@ import (
 var hadError bool // Improvement idea: Implement an ErrorHandling interface so we can pass different strategies
 
 func main() {
-	test_expr()
+	// test_expr()
 	if len(os.Args) > 2 {
 		panic("Need two or more args")
 	} else if len(os.Args) == 2 {
@@ -105,19 +105,25 @@ func runPrompt() error {
 func run(source string) {
 	scanner := scanner.NewScanner(source)
 	tokens := scanner.ScanTokens()
-    expressionStringVisitor := expression.ExpressionStringVisitor{}
-    interp := interpreter.Interpreter{}
-    var expr expression.Expr
-
     parser := parser.NewParser(tokens)
+    interp := interpreter.Interpreter{}
+    // expressionStringVisitor := expression.ExpressionStringVisitor{}
 
-    for expr = parser.Parse(); !parser.IsAtEnd(); expr = parser.Parse()  {
-        expr.Accept(&expressionStringVisitor)
-        fmt.Println(expressionStringVisitor.As_string())
-        // fmt.Println(interp.Evaluate(expr))
-        interp.Interpret(expr)
-        expressionStringVisitor.Reset()
+    statements := parser.Parse()
+    if statements == nil {
+        return
     }
+
+    interp.Interpret(statements)
+
+
+    // for expr = parser.Parse(); !parser.IsAtEnd(); expr = parser.Parse()  {
+    //     expr.Accept(&expressionStringVisitor)
+    //     fmt.Println(expressionStringVisitor.As_string())
+    //     // fmt.Println(interp.Evaluate(expr))
+    //     interp.Interpret(expr)
+    //     expressionStringVisitor.Reset()
+    // }
 }
 
 func raise_error(line int, message string) {
