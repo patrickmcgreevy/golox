@@ -4,6 +4,7 @@ import (
 	"golox/errorhandling"
 	"golox/expression"
 	"golox/token"
+    "golox/statement"
 )
 
 type Parser struct {
@@ -15,13 +16,19 @@ func NewParser(tokens []token.Token) Parser {
 	return Parser{tokens: tokens, current: 0}
 }
 
-func (p *Parser) Parse() expression.Expr{
-    expr, err := p.expression()
+func (p *Parser) Parse() statement.Statement {
+    // expr, err := p.expression()
+    stmt, err := p.statement()
     if err != nil {
         return nil
     }
-    return expr
+    return stmt
 }
+
+func (p *Parser) statement() (statement.Statement, *ParseError) {
+}
+
+
 
 func (p *Parser) expression() (expression.Expr, *ParseError) {
     expr, err := p.equality()
@@ -172,7 +179,7 @@ func (p *Parser) primary() (expression.Expr, *ParseError) {
 func (p *Parser) syncronize() {
 	p.advance()
 
-	for !p.isAtEnd() {
+	for !p.IsAtEnd() {
 		if p.previous().Token_type == token.SEMICOLON {
 			return
 		}
@@ -198,14 +205,14 @@ func (p *Parser) match(token_type ...token.TokenType) bool {
 }
 
 func (p Parser) check(token_type token.TokenType) bool {
-	if p.isAtEnd() {
+	if p.IsAtEnd() {
 		return false
 	}
 	return p.peek().Token_type == token_type
 }
 
 func (p *Parser) advance() token.Token {
-	if !p.isAtEnd() {
+	if !p.IsAtEnd() {
 		p.current += 1
 	}
 
@@ -237,7 +244,7 @@ func (p Parser) previous() token.Token {
 	return p.tokens[p.current-1]
 }
 
-func (p Parser) isAtEnd() bool {
+func (p Parser) IsAtEnd() bool {
 	return p.peek().Token_type == token.EOF
 }
 

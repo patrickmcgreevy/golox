@@ -106,21 +106,17 @@ func run(source string) {
 	scanner := scanner.NewScanner(source)
 	tokens := scanner.ScanTokens()
     expressionStringVisitor := expression.ExpressionStringVisitor{}
-    evalVisitor := interpreter.Interpreter{}
+    interp := interpreter.Interpreter{}
+    var expr expression.Expr
 
-	for _, v := range tokens {
-		fmt.Println(v)
-	}
     parser := parser.NewParser(tokens)
 
-    // runtime.Breakpoint()
-    expr:= parser.Parse()
-    if expr != nil {
-        // fmt.Println(expr.Expand_to_string())
+    for expr = parser.Parse(); !parser.IsAtEnd(); expr = parser.Parse()  {
         expr.Accept(&expressionStringVisitor)
         fmt.Println(expressionStringVisitor.As_string())
-        fmt.Println(evalVisitor.Evaluate(expr))
-        expr = parser.Parse()
+        // fmt.Println(interp.Evaluate(expr))
+        interp.Interpret(expr)
+        expressionStringVisitor.Reset()
     }
 }
 

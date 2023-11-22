@@ -3,6 +3,7 @@ package scanner
 import (
 	"golox/errorhandling"
 	"golox/token"
+	"strconv"
 	"unicode"
 )
 
@@ -169,8 +170,12 @@ func (s *Scanner) tokenize_number() {
 	}
 
 	new_string = s.source[s.start:s.current]
+    num, err := strconv.ParseFloat(new_string, 64)
+    if err != nil {
+        panic("Not a number!")
+    }
 
-	s.addTokenLiteral(token.NUMBER, &new_string)
+	s.addTokenLiteral(token.NUMBER, num)
 
 	// var decimal bool = false
 	// var c rune
