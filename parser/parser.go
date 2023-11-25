@@ -29,6 +29,7 @@ func (p *Parser) Parse()  []statement.Statement {
         // stmt, err := p.statement()
         stmt, err := p.declaration()
         if err != nil {
+            errorhandling.RuntimeError(err)
             return nil
         }
         statements = append(statements, stmt)
@@ -116,11 +117,58 @@ func (p *Parser) varDeclaration() (statement.Statement, *ParseError) {
 
 
 func (p *Parser) expression() (expression.Expr, *ParseError) {
-    expr, err := p.equality()
+    return p.assignment()
+    // expr, err := p.assignment()
+    // if error
+    // p.equality
+
+
+ //    expr, err := p.equality()
+ //    if err != nil {
+ //        return expression.Unary{}, err
+ //    }
+	// return expr, nil
+}
+
+func (p *Parser) assignment() (expression.Expr, *ParseError) {
+    left, err := p.equality()
     if err != nil {
-        return expression.Unary{}, err
+        return nil, err
     }
-	return expr, nil
+
+    if p.match(token.EQUAL) {
+        right, err := p.assignment()
+        if err != nil {
+            return nil, err
+        }
+
+        val, ok := left.(expression.Variable)
+        if !ok {
+            err := NewParseError("Left side of assignment must be a variable.")
+            return nil, &err
+        }
+        return expression.Assign{Name: val.GetToken(), Value: right}, nil
+    }
+
+    return left, nil
+
+    // var name token.Token
+    // if p.match(token.IDENTIFIER) {
+    //     name = p.previous()
+    //     _, err := p.consume(token.EQUAL, "Expected '=' after variable name.")
+    //     if err != nil {
+    //         return nil, err
+    //     }
+    //
+    //     right, err := p.assignment()
+    //     if err != nil {
+    //         return nil ,err
+    //     }
+    //
+    //     return expression.Assign{Name: name, Value: right}, nil
+    // }
+    //
+    // return p.equality()
 }
 
 func (p *Parser) equality() (expression.Expr, *ParseError) {

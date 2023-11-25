@@ -3,20 +3,15 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"golox/errorhandling"
-	"golox/expression"
 	"golox/interpreter"
 	"golox/parser"
 	"golox/scanner"
-	"golox/token"
 	"os"
-	// "runtime"
 )
 
 var hadError bool // Improvement idea: Implement an ErrorHandling interface so we can pass different strategies
 
 func main() {
-	// test_expr()
 	if len(os.Args) > 2 {
 		panic("Need two or more args")
 	} else if len(os.Args) == 2 {
@@ -30,49 +25,6 @@ func main() {
 	} else {
 		runPrompt()
 	}
-}
-
-func test_expr() {
-    visitor := expression.ExpressionStringVisitor{}
-	expr := expression.Binary{
-		Left: expression.Binary{
-			Left: expression.Unary{
-				Operator: token.Token{Token_type: token.BANG, Lexeme: "!", Literal: nil, Line: 0},
-				Right:    expression.Literal{Value: 420}},
-			Operator: token.Token{Token_type: token.MINUS, Lexeme: "-", Literal: nil, Line: 0},
-			Right:    expression.Grouping{Expr: expression.Literal{Value: "patrick"}}},
-		Operator: token.Token{Token_type: token.PLUS, Lexeme: "+", Literal: nil, Line: 0},
-		Right:    expression.Literal{Value: "def"},
-	}
-
-	expr.Accept(&visitor)
-    fmt.Println(visitor.As_string())
-    visitor.Reset()
-
-
-	// Expr expression = new Expr.Binary(
-	//         new Expr.Unary(
-	//             new Token(TokenType.MINUS, "-", null, 1),
-	//             new Expr.Literal(123)),
-	//         new Token(TokenType.STAR, "*", null, 1),
-	//         new Expr.Grouping(
-	//             new Expr.Literal(45.67)));
-	// (* (- 123) (group 45.67))
-
-	expr2 := expression.Binary{
-		Left: expression.Unary{
-			Operator: token.Token{Token_type: token.MINUS, Lexeme: "-", Literal: nil, Line: 0},
-			Right:    expression.Literal{Value: 123},
-		},
-		Operator: token.Token{Token_type: token.STAR, Lexeme: "*", Literal: nil, Line: 0},
-		Right: expression.Grouping{
-			Expr: expression.Literal{Value: 45.67},
-		},
-	}
-
-	expr2.Accept(&visitor)
-    fmt.Println(visitor.As_string())
-    visitor.Reset()
 }
 
 func runFile(path string) error {
@@ -94,7 +46,6 @@ func runPrompt() error {
     reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("> ")
-		// _, err := fmt.Scanln(&line)
         line, err := reader.ReadString('\n')
 		if err != nil {
             if err.Error() == "EOF" {
@@ -111,8 +62,7 @@ func run(source string) {
 	scanner := scanner.NewScanner(source)
 	tokens := scanner.ScanTokens()
     parser := parser.NewParser(tokens)
-    interp := interpreter.Interpreter{}
-    // expressionStringVisitor := expression.ExpressionStringVisitor{}
+    interp := interpreter.NewInterpreter()
 
     statements := parser.Parse()
     if statements == nil {
@@ -120,24 +70,4 @@ func run(source string) {
     }
 
     interp.Interpret(statements)
-
-
-    // for expr = parser.Parse(); !parser.IsAtEnd(); expr = parser.Parse()  {
-    //     expr.Accept(&expressionStringVisitor)
-    //     fmt.Println(expressionStringVisitor.As_string())
-    //     // fmt.Println(interp.Evaluate(expr))
-    //     interp.Interpret(expr)
-    //     expressionStringVisitor.Reset()
-    // }
-}
-
-func raise_error(line int, message string) {
-	errorhandling.Report(line, "", message)
-}
-
-type Scanner struct {
-}
-
-func (s *Scanner) scanTokens() []token.Token {
-	return []token.Token{}
 }

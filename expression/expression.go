@@ -81,6 +81,14 @@ func (e Variable) Accept(v Visitor) {
     v.VisitVariable(e)
 }
 
+func (e Variable) GetName() string {
+    return e.name.Lexeme
+}
+
+func (e Variable) GetToken() token.Token {
+    return e.name
+}
+
 func (e Assign) Expand_to_string() string {
 	sb := strings.Builder{}
 

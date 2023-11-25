@@ -66,7 +66,7 @@ type Var struct {
 }
 
 func NewVarStmt( name token.Token, initializer expression.Expr) Var {
-    return Var{Initializer: nil, Name: name}
+    return Var{Initializer: initializer, Name: name}
 }
 
 func (s Var) Accept(v StatementVisitor) {

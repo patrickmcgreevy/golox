@@ -90,6 +90,12 @@ func (v Interpreter) isEqual(left, right any) bool {
 }
 
 func (v *Interpreter) VisitAssign(e expression.Assign) {
+    right, err := v.Evaluate(e.Value)
+    if err != nil {
+        v.err = err
+        return
+    }
+    v.environment.Define(e.Name.Lexeme, right)
 }
 
 func (v *Interpreter) VisitBinary(e expression.Binary) {
@@ -217,7 +223,13 @@ func (v *Interpreter) VisitUnary(e expression.Unary) {
 }
 
 func (v *Interpreter) VisitVariable(e expression.Variable) {
-	// TODO: We need global state now!!
+    val, err := v.environment.Get(e.GetToken())
+    if err != nil {
+        v.err = newRuntimeError(e.GetToken(), err.Error())
+        return
+    }
+
+    v.val = val
 }
 
 func (v *Interpreter) VisitBlockStmt(stmt statement.Block) {
