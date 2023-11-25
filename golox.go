@@ -10,8 +10,11 @@ import (
 )
 
 var hadError bool // Improvement idea: Implement an ErrorHandling interface so we can pass different strategies
+var interp interpreter.Interpreter
 
 func main() {
+    interp = interpreter.NewInterpreter()
+
 	if len(os.Args) > 2 {
 		panic("Need two or more args")
 	} else if len(os.Args) == 2 {
@@ -62,7 +65,7 @@ func run(source string) {
 	scanner := scanner.NewScanner(source)
 	tokens := scanner.ScanTokens()
     parser := parser.NewParser(tokens)
-    interp := interpreter.NewInterpreter()
+    // interp := interpreter.NewInterpreter()
 
     statements := parser.Parse()
     if statements == nil {
