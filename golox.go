@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"golox/errorhandling"
 	"golox/expression"
@@ -90,11 +91,15 @@ func runFile(path string) error {
 }
 
 func runPrompt() error {
-	var line string
+    reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("> ")
-		_, err := fmt.Scanln(&line)
+		// _, err := fmt.Scanln(&line)
+        line, err := reader.ReadString('\n')
 		if err != nil {
+            if err.Error() == "EOF" {
+                return nil
+            }
 			panic(err)
 		}
 		run(line)

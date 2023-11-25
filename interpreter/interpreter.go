@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"golox/environment"
 	"golox/errorhandling"
 	"golox/expression"
 	"golox/statement"
@@ -37,33 +38,32 @@ func newOperandsError(operator token.Token) *RuntimeError {
 }
 
 type Interpreter struct {
-	val any
-	err *RuntimeError
+	val         any
+	err         *RuntimeError
+	environment environment.Environment
+}
+
+func NewInterpreter() Interpreter {
+	return Interpreter{val: nil, err: nil, environment: environment.NewEnvironment()}
 }
 
 func (v *Interpreter) Interpret(statements []statement.Statement) {
 	v.err = nil
-    for _, stmt := range statements {
-        err := v.execute(stmt)
-        if err != nil {
-            errorhandling.RuntimeError(err)
-            return
-        }
-    }
-	// val, err := v.Evaluate(expr)
-	// if err != nil {
-	// 	errorhandling.RuntimeError(err)
-	// 	return
-	// }
-	// fmt.Println(val)
+	for _, stmt := range statements {
+		err := v.execute(stmt)
+		if err != nil {
+			errorhandling.RuntimeError(err)
+			return
+		}
+	}
 }
 
 func (v *Interpreter) execute(stmt statement.Statement) *RuntimeError {
-    stmt.Accept(v)
-    if v.err != nil {
-        return v.err
-    }
-    return nil
+	stmt.Accept(v)
+	if v.err != nil {
+		return v.err
+	}
+	return nil
 }
 
 func (v *Interpreter) Evaluate(e expression.Expr) (any, *RuntimeError) {
@@ -216,29 +216,46 @@ func (v *Interpreter) VisitUnary(e expression.Unary) {
 	}
 }
 
+func (v *Interpreter) VisitVariable(e expression.Variable) {
+	// TODO: We need global state now!!
+}
+
 func (v *Interpreter) VisitBlockStmt(stmt statement.Block) {
 }
 func (v *Interpreter) VisitClassStmt(stmt statement.Class) {
 }
 func (v *Interpreter) VisitExpressionStmt(stmt statement.Expression) {
-    v.Evaluate(stmt.Val)
+	v.Evaluate(stmt.Val)
 }
 func (v *Interpreter) VisitFunctionStmt(stmt statement.Function) {
 }
 func (v *Interpreter) VisitIfStmt(stmt statement.If) {
 }
 func (v *Interpreter) VisitPrintStmt(stmt statement.Print) {
-    val, err := v.Evaluate(stmt.Val)
-    if err != nil {
-        v.err = err
-        return
-    }
+	val, err := v.Evaluate(stmt.Val)
+	if err != nil {
+		v.err = err
+		return
+	}
 
-    fmt.Println(val)
+	fmt.Println(val)
 }
 func (v *Interpreter) VisitReturnStmt(stmt statement.Return) {
 }
+
 func (v *Interpreter) VisitVarStmt(stmt statement.Var) {
+	var val any
+    var err *RuntimeError
+	if stmt.Initializer != nil {
+		val, err = v.Evaluate(stmt.Initializer)
+		if err != nil {
+			v.err = err
+			return
+		}
+	}
+	// Create a variable and assign it to val
+	v.environment.Define(stmt.Name.Lexeme, val)
 }
+
 func (v *Interpreter) VisitWhileStmt(stmt statement.While) {
 }

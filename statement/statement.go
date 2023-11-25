@@ -1,6 +1,9 @@
 package statement
 
-import "golox/expression"
+import (
+    "golox/token"
+	"golox/expression"
+)
 
 type StatementVisitor interface {
 	VisitBlockStmt(stmt Block)
@@ -58,7 +61,19 @@ type Return struct {
 }
 
 type Var struct {
+    Initializer expression.Expr
+    Name token.Token
 }
+
+func NewVarStmt( name token.Token, initializer expression.Expr) Var {
+    return Var{Initializer: nil, Name: name}
+}
+
+func (s Var) Accept(v StatementVisitor) {
+    v.VisitVarStmt(s)
+}
+
+
 
 type While struct {
 }

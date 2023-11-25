@@ -26,7 +26,8 @@ func (p *Parser) Parse()  []statement.Statement {
     statements := []statement.Statement{}
     at_end := p.IsAtEnd()
     for !at_end {
-        stmt, err := p.statement()
+        // stmt, err := p.statement()
+        stmt, err := p.declaration()
         if err != nil {
             return nil
         }
@@ -37,10 +38,25 @@ func (p *Parser) Parse()  []statement.Statement {
     return statements
 }
 
+func (p *Parser) declaration() (statement.Statement, *ParseError) {
+    var stmt statement.Statement
+    var err *ParseError
+    if p.match(token.VAR) {
+        stmt, err = p.varDeclaration()
+    } else {
+        stmt, err = p.statement()
+    }
+    if err != nil {
+        p.syncronize()
+        return nil, err
+    }
+    return stmt, nil
+}
+
 func (p *Parser) statement() (statement.Statement, *ParseError) {
     if p.match(token.PRINT) {
         return p.printStatement()
-    }
+    } 
 
     return p.expressionStatement()
 }
@@ -72,6 +88,30 @@ func (p *Parser) expressionStatement() (statement.Statement, *ParseError) {
     }
 
     return statement.NewExpressionStmt(expr), nil
+}
+
+func (p *Parser) varDeclaration() (statement.Statement, *ParseError) {
+    var initializer expression.Expr
+    var err *ParseError
+
+    name, err := p.consume(token.IDENTIFIER, "Expect variable name.")
+    if err != nil {
+        return nil, err
+    }
+    if p.match(token.EQUAL) {
+        initializer, err = p.expression()
+    } else {
+        initializer = nil
+    }
+
+    if err != nil {
+        return nil, err
+    }
+    _, err = p.consume(token.SEMICOLON, "Expect ';' after variable declaration.")
+    if err != nil {
+        return nil, err
+    }
+    return statement.NewVarStmt(name, initializer), nil
 }
 
 
@@ -189,7 +229,7 @@ func (p *Parser) unary() (expression.Expr, *ParseError) {
     return primary, nil
 }
 
-// primary        → NUMBER | STRING | "true" | "false" | "nil"
+// primary        → NUMBER | STRING | "true" | "false" | "nil" | IDENTIFIER | (expression)
 //
 //	| "(" expression ")"
 func (p *Parser) primary() (expression.Expr, *ParseError) {
@@ -216,10 +256,15 @@ func (p *Parser) primary() (expression.Expr, *ParseError) {
 
 		return expression.Grouping{Expr: expr}, nil
 	}
+    if p.match(token.IDENTIFIER) {
+        return expression.NewVariableExpression(p.previous()), nil
+    }
 	parse_error := p.error(p.peek(), "Expect expression.")
 
 	return expression.Unary{}, &parse_error
 }
+
+// func (p *Parser) identifier() (expression.Expr, *ParseError)
 
 func (p *Parser) syncronize() {
 	p.advance()

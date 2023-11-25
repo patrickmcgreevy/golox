@@ -69,6 +69,18 @@ func (e Unary) Accept(v Visitor) {
     v.VisitUnary(e)
 }
 
+type Variable struct {
+    name token.Token
+}
+
+func NewVariableExpression(name token.Token) Variable {
+    return Variable{name: name}
+}
+
+func (e Variable) Accept(v Visitor) {
+    v.VisitVariable(e)
+}
+
 func (e Assign) Expand_to_string() string {
 	sb := strings.Builder{}
 
@@ -116,12 +128,17 @@ func (e Unary) Expand_to_string() string {
     return parenthesize(e.Operator.Lexeme, e.Right)
 }
 
+func (e Variable) Expand_to_string() string {
+    return e.name.Lexeme
+}
+
 type Visitor interface {
     VisitAssign(e Assign)
     VisitBinary(e Binary)
     VisitGrouping(e Grouping)
     VisitLiteral(e Literal)
     VisitUnary(e Unary)
+    VisitVariable(e Variable)
 }
 
 type ExpressionStringVisitor struct {
@@ -185,4 +202,9 @@ func (v *ExpressionStringVisitor) VisitLiteral(e Literal) {
 func (v *ExpressionStringVisitor) VisitUnary(e Unary) {
     v.parenthesize(e.Operator.Lexeme, e.Right)
 }
+
+func (v *ExpressionStringVisitor) VisitVariable(e Variable) {
+    v.expr_string_builder.WriteString(e.name.Lexeme)
+}
+
 
