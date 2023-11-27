@@ -66,6 +66,26 @@ func (v *Interpreter) execute(stmt statement.Statement) *RuntimeError {
 	return nil
 }
 
+func (v *Interpreter) executeBlock(statements []statement.Statement, env environment.Environment) {
+    v.pushEnvironment(&env)
+    defer v.popEnvironment()
+    for _, stmt := range statements {
+        v.execute(stmt)
+    }
+}
+
+func (v *Interpreter) pushEnvironment(env *environment.Environment) {
+    env.SetEnclosing(&v.environment)
+    v.environment = *env
+}
+
+func (v *Interpreter) popEnvironment() {
+    parent := v.environment.GetEnclosing()
+    if parent != nil {
+        v.environment = *parent
+    }
+}
+
 func (v *Interpreter) Evaluate(e expression.Expr) (any, *RuntimeError) {
 	e.Accept(v)
 
@@ -95,7 +115,11 @@ func (v *Interpreter) VisitAssign(e expression.Assign) {
         v.err = err
         return
     }
-    v.environment.Define(e.Name.Lexeme, right)
+    assignment_error := v.environment.Assign(e.Name.Lexeme, right)
+    if assignment_error != nil {
+        err = newRuntimeError(e.Name, assignment_error.Error())
+        v.err = err
+    }
 }
 
 func (v *Interpreter) VisitBinary(e expression.Binary) {
@@ -233,6 +257,10 @@ func (v *Interpreter) VisitVariable(e expression.Variable) {
 }
 
 func (v *Interpreter) VisitBlockStmt(stmt statement.Block) {
+    // Declare a new environment
+    // Execute all the declarations in the block
+    env := environment.NewEnvironment()
+    v.executeBlock(stmt.GetStatements(), env)
 }
 func (v *Interpreter) VisitClassStmt(stmt statement.Class) {
 }

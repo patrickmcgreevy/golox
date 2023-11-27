@@ -17,16 +17,9 @@ func NewParser(tokens []token.Token) Parser {
 }
 
 func (p *Parser) Parse()  []statement.Statement {
-    // expr, err := p.expression()
-    // stmt, err := p.statement()
-    // if err != nil {
-    //     return nil
-    // }
-    // return stmt
     statements := []statement.Statement{}
     at_end := p.IsAtEnd()
     for !at_end {
-        // stmt, err := p.statement()
         stmt, err := p.declaration()
         if err != nil {
             errorhandling.RuntimeError(err)
@@ -58,6 +51,13 @@ func (p *Parser) statement() (statement.Statement, *ParseError) {
     if p.match(token.PRINT) {
         return p.printStatement()
     } 
+    if p.match(token.LEFT_BRACE) {
+        stmts, err := p.block()
+        if err != nil {
+            return nil, err
+        }
+        return statement.NewBlockStmt(stmts), nil
+    }
 
     return p.expressionStatement()
 }
@@ -89,6 +89,24 @@ func (p *Parser) expressionStatement() (statement.Statement, *ParseError) {
     }
 
     return statement.NewExpressionStmt(expr), nil
+}
+
+func (p *Parser) block() ([]statement.Statement, *ParseError) {
+    statements := []statement.Statement{}
+
+    for !p.check(token.RIGHT_BRACE) && !p.IsAtEnd() {
+        stmt, err := p.declaration()
+        if err != nil {
+            return nil, err
+        }
+        statements = append(statements, stmt)
+    }
+    _, err := p.consume(token.RIGHT_BRACE, "Expect '}' after block.")
+    if err != nil {
+        return nil, err
+    }
+
+    return statements, nil
 }
 
 func (p *Parser) varDeclaration() (statement.Statement, *ParseError) {

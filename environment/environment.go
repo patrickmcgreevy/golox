@@ -6,7 +6,7 @@ import (
 )
 
 type undefinedVariableError struct {
-    name token.Token
+    name string
 }
 
 // func (err undefinedVariableError) Error() string {
@@ -14,24 +14,42 @@ type undefinedVariableError struct {
 // }
 
 func (err undefinedVariableError) Error() string {
-    return fmt.Sprintf("'%s' is not defined in this environment.", err.name.Lexeme)
+    return fmt.Sprintf("'%s' is not defined.", err.name)
 }
 
-func newUndefinedVariableError(name token.Token) undefinedVariableError {
+func newUndefinedVariableError(name string) undefinedVariableError {
     return undefinedVariableError{name: name}
 }
 
 
 type Environment struct {
     values map[string]any
+    enclosing *Environment
 }
 
 func NewEnvironment() Environment {
-    return Environment{values: make(map[string]any)}
+    return Environment{values: make(map[string]any), enclosing: nil}
+}
+
+func (e *Environment) SetEnclosing(enclosing *Environment) {
+    e.enclosing = enclosing
 }
 
 func (e *Environment) Define(name string, value any) {
     e.values[name] = value
+}
+
+func (e *Environment) Assign(name string, value any) error {
+    _, ok := e.values[name]
+    if !ok {
+        if e.enclosing != nil {
+        return e.enclosing.Assign(name, value)
+        }
+        return newUndefinedVariableError(name)
+    }
+    e.values[name] = value
+
+    return nil
 }
 
 func (e Environment) Get(name token.Token) (any, error) {
@@ -40,6 +58,13 @@ func (e Environment) Get(name token.Token) (any, error) {
     if ok {
         return val, nil
     }
-    err = newUndefinedVariableError(name)
+    if e.enclosing != nil {
+        e.enclosing.Get(name)
+    }
+    err = newUndefinedVariableError(name.Lexeme)
     return nil, err
+}
+
+func (e Environment) GetEnclosing() *Environment {
+    return e.enclosing
 }

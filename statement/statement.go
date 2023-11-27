@@ -22,6 +22,19 @@ type Statement interface {
 }
 
 type Block struct {
+    statements []Statement
+}
+
+func (s Block) Accept(v StatementVisitor) {
+    v.VisitBlockStmt(s)
+}
+
+func NewBlockStmt(statments []Statement) Block {
+    return Block{statements: statments}
+}
+
+func (s Block) GetStatements() []Statement {
+    return s.statements
 }
 
 type Class struct {
