@@ -9,10 +9,6 @@ type undefinedVariableError struct {
     name string
 }
 
-// func (err undefinedVariableError) Error() string {
-//     return fmt.Sprintf("'%s' is not defined in this environment.", err.name)
-// }
-
 func (err undefinedVariableError) Error() string {
     return fmt.Sprintf("'%s' is not defined.", err.name)
 }
@@ -59,7 +55,7 @@ func (e Environment) Get(name token.Token) (any, error) {
         return val, nil
     }
     if e.enclosing != nil {
-        e.enclosing.Get(name)
+        return e.enclosing.Get(name)
     }
     err = newUndefinedVariableError(name.Lexeme)
     return nil, err

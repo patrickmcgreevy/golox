@@ -40,11 +40,12 @@ func newOperandsError(operator token.Token) *RuntimeError {
 type Interpreter struct {
 	val         any
 	err         *RuntimeError
-	environment environment.Environment
+	pEnvironment *environment.Environment
 }
 
 func NewInterpreter() Interpreter {
-	return Interpreter{val: nil, err: nil, environment: environment.NewEnvironment()}
+    env := environment.NewEnvironment()
+	return Interpreter{val: nil, err: nil, pEnvironment: &env}
 }
 
 func (v *Interpreter) Interpret(statements []statement.Statement) {
@@ -75,14 +76,14 @@ func (v *Interpreter) executeBlock(statements []statement.Statement, env environ
 }
 
 func (v *Interpreter) pushEnvironment(env *environment.Environment) {
-    env.SetEnclosing(&v.environment)
-    v.environment = *env
+    env.SetEnclosing(v.pEnvironment)
+    v.pEnvironment = env
 }
 
 func (v *Interpreter) popEnvironment() {
-    parent := v.environment.GetEnclosing()
+    parent := v.pEnvironment.GetEnclosing()
     if parent != nil {
-        v.environment = *parent
+        v.pEnvironment = parent
     }
 }
 
@@ -115,7 +116,7 @@ func (v *Interpreter) VisitAssign(e expression.Assign) {
         v.err = err
         return
     }
-    assignment_error := v.environment.Assign(e.Name.Lexeme, right)
+    assignment_error := v.pEnvironment.Assign(e.Name.Lexeme, right)
     if assignment_error != nil {
         err = newRuntimeError(e.Name, assignment_error.Error())
         v.err = err
@@ -247,7 +248,7 @@ func (v *Interpreter) VisitUnary(e expression.Unary) {
 }
 
 func (v *Interpreter) VisitVariable(e expression.Variable) {
-    val, err := v.environment.Get(e.GetToken())
+    val, err := v.pEnvironment.Get(e.GetToken())
     if err != nil {
         v.err = newRuntimeError(e.GetToken(), err.Error())
         return
@@ -294,7 +295,7 @@ func (v *Interpreter) VisitVarStmt(stmt statement.Var) {
 		}
 	}
 	// Create a variable and assign it to val
-	v.environment.Define(stmt.Name.Lexeme, val)
+	v.pEnvironment.Define(stmt.Name.Lexeme, val)
 }
 
 func (v *Interpreter) VisitWhileStmt(stmt statement.While) {
