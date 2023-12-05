@@ -41,11 +41,12 @@ type Interpreter struct {
 	val         any
 	err         *RuntimeError
 	pEnvironment *environment.Environment
+    interactiveMode bool
 }
 
 func NewInterpreter() Interpreter {
     env := environment.NewEnvironment()
-	return Interpreter{val: nil, err: nil, pEnvironment: &env}
+	return Interpreter{val: nil, err: nil, pEnvironment: &env, interactiveMode: false}
 }
 
 func (v *Interpreter) Interpret(statements []statement.Statement) {
@@ -57,6 +58,14 @@ func (v *Interpreter) Interpret(statements []statement.Statement) {
 			return
 		}
 	}
+}
+
+func (v *Interpreter) EnableInteractiveMode() {
+    v.interactiveMode = true
+}
+
+func (v *Interpreter) DisableInteractiveMode() {
+    v.interactiveMode = false
 }
 
 func (v *Interpreter) execute(stmt statement.Statement) *RuntimeError {
@@ -266,11 +275,34 @@ func (v *Interpreter) VisitBlockStmt(stmt statement.Block) {
 func (v *Interpreter) VisitClassStmt(stmt statement.Class) {
 }
 func (v *Interpreter) VisitExpressionStmt(stmt statement.Expression) {
-	v.Evaluate(stmt.Val)
+    val, err := v.Evaluate(stmt.Val)
+    if err == nil && v.interactiveMode {
+        fmt.Println(val)
+    }
 }
 func (v *Interpreter) VisitFunctionStmt(stmt statement.Function) {
 }
 func (v *Interpreter) VisitIfStmt(stmt statement.If) {
+    val, err := v.Evaluate(stmt.Conditional)
+    if err != nil {
+        v.err = err
+        return
+    }
+    if v.isTruthy(val) {
+        err := v.execute(stmt.If_stmt)
+        if err != nil {
+            v.err = err
+            return
+        }
+    } else {
+        if stmt.Else_stmt != nil {
+            err := v.execute(stmt.Else_stmt)
+            if err != nil {
+                v.err = err
+                return
+            }
+        }
+    }
 }
 func (v *Interpreter) VisitPrintStmt(stmt statement.Print) {
 	val, err := v.Evaluate(stmt.Val)

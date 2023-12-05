@@ -59,7 +59,44 @@ func (p *Parser) statement() (statement.Statement, *ParseError) {
         return statement.NewBlockStmt(stmts), nil
     }
 
+    if p.match(token.IF) {
+        return p.ifStatement()
+    }
+
     return p.expressionStatement()
+}
+
+func (p *Parser) ifStatement() (statement.Statement, *ParseError) {
+    var else_stmt statement.Statement
+
+    _, err := p.consume(token.LEFT_PAREN, "Expected '(' after 'if'.")
+    if err != nil {
+        return nil, err
+    }
+
+    expr, err := p.expression()
+    if err != nil {
+        return nil, err
+    }
+
+    _, err = p.consume(token.RIGHT_PAREN, "Expected ')' after expression.")
+    if err != nil {
+        return nil, err
+    }
+
+    if_stmt, err := p.statement()
+    if err != nil {
+        return nil, err
+    }
+
+    if p.match(token.ELSE) {
+        else_stmt, err = p.statement()
+    }
+    if err != nil {
+        return nil, err
+    }
+
+    return statement.NewIfStatement(expr, if_stmt, else_stmt), nil
 }
 
 func (p *Parser) printStatement() (statement.Statement, *ParseError) {

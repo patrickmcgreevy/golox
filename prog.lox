@@ -17,3 +17,6 @@ var c = "global c";
 print a;
 print b;
 print c;
+a = "";
+if (false) print "'a' is true'"; 
+else print "not 'a'";

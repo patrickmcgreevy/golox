@@ -56,6 +56,17 @@ type Function struct {
 }
 
 type If struct {
+    Conditional expression.Expr
+    If_stmt Statement
+    Else_stmt Statement
+}
+
+func NewIfStatement(conitional expression.Expr, if_stmt, else_stmt Statement) If {
+    return If{Conditional: conitional, If_stmt: if_stmt, Else_stmt: else_stmt}
+}
+
+func (s If) Accept(v StatementVisitor) {
+    v.VisitIfStmt(s)
 }
 
 type Print struct {

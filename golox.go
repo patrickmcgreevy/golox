@@ -46,12 +46,13 @@ func runFile(path string) error {
 }
 
 func runPrompt() error {
+    interp.EnableInteractiveMode()
     reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("> ")
         line, err := reader.ReadString('\n')
 		if err != nil {
-            if err.Error() == "EOF" {
+           if err.Error() == "EOF" {
                 return nil
             }
 			panic(err)
@@ -65,7 +66,6 @@ func run(source string) {
 	scanner := scanner.NewScanner(source)
 	tokens := scanner.ScanTokens()
     parser := parser.NewParser(tokens)
-    // interp := interpreter.NewInterpreter()
 
     statements := parser.Parse()
     if statements == nil {
