@@ -237,6 +237,50 @@ func (v *Interpreter) VisitLiteral(e expression.Literal) {
 	}
 }
 
+func (v *Interpreter) VisitLogical(e expression.Logical) {
+    left, err := v.Evaluate(e.Left)
+    if err != nil {
+        v.err = err
+        return
+    }
+
+    left_truth_value := v.isTruthy(left)
+
+    switch e.Operator.Token_type {
+    case token.OR:
+        if left_truth_value {
+            v.val = left
+            v.err = nil
+            return
+        } else {
+            right, err := v.Evaluate(e.Right)
+            if err != nil {
+                v.err = err
+                return
+            }
+
+            v.val = right
+            v.err = nil
+            return
+        }
+    case token.AND:
+        if !left_truth_value {
+            v.err = nil
+            v.val = left
+            return
+        } else {
+            right, err := v.Evaluate(e.Right)
+            if err != nil {
+                v.err = err
+                return
+            }
+            v.val = right
+            v.err = nil
+            return
+        }
+    }
+}
+
 func (v *Interpreter) VisitUnary(e expression.Unary) {
 	right, err := v.Evaluate(e.Right)
 	if err != nil {

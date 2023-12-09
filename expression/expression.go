@@ -60,6 +60,30 @@ func (e Literal) Accept(v Visitor) {
     v.VisitLiteral(e)
 }
 
+type Logical struct {
+    Left Expr
+    Operator token.Token
+    Right Expr
+}
+
+func NewLogical(left Expr,operator token.Token, right Expr) Logical {
+    return Logical{Left: left, Operator: operator,  Right: right}
+}
+
+func (e Logical) Accept(v Visitor) {
+    v.VisitLogical(e)
+}
+
+func (e Logical) Expand_to_string() string {
+    sb := strings.Builder{}
+
+    sb.WriteString(e.Left.Expand_to_string())
+    sb.WriteString(e.Operator.Lexeme)
+    sb.WriteString(e.Right.Expand_to_string())
+
+    return sb.String()
+}
+
 type Unary struct {
 	Operator token.Token
 	Right    Expr
@@ -145,6 +169,7 @@ type Visitor interface {
     VisitBinary(e Binary)
     VisitGrouping(e Grouping)
     VisitLiteral(e Literal)
+    VisitLogical(e Logical)
     VisitUnary(e Unary)
     VisitVariable(e Variable)
 }
@@ -205,6 +230,12 @@ func (v *ExpressionStringVisitor) VisitLiteral(e Literal) {
 	default:
 		panic("Unexpected type")
 	}
+}
+
+func (v *ExpressionStringVisitor) VisitLogical(e Logical) {
+    e.Left.Accept(v)
+    v.expr_string_builder.WriteString(e.Operator.Lexeme)
+    e.Right.Accept(v)
 }
 
 func (v *ExpressionStringVisitor) VisitUnary(e Unary) {

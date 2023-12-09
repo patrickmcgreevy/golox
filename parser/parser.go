@@ -186,7 +186,7 @@ func (p *Parser) expression() (expression.Expr, *ParseError) {
 }
 
 func (p *Parser) assignment() (expression.Expr, *ParseError) {
-    left, err := p.equality()
+    left, err := p.logic_or()
     if err != nil {
         return nil, err
     }
@@ -206,24 +206,44 @@ func (p *Parser) assignment() (expression.Expr, *ParseError) {
     }
 
     return left, nil
+}
 
-    // var name token.Token
-    // if p.match(token.IDENTIFIER) {
-    //     name = p.previous()
-    //     _, err := p.consume(token.EQUAL, "Expected '=' after variable name.")
-    //     if err != nil {
-    //         return nil, err
-    //     }
-    //
-    //     right, err := p.assignment()
-    //     if err != nil {
-    //         return nil ,err
-    //     }
-    //
-    //     return expression.Assign{Name: name, Value: right}, nil
-    // }
-    //
-    // return p.equality()
+func (p *Parser) logic_or() (expression.Expr, *ParseError) {
+    left, err := p.logic_and()
+    if err != nil {
+        return nil, err
+    }
+
+    if p.match(token.OR) {
+        op := p.previous()
+        right, err := p.logic_or()
+        if err != nil {
+            return nil, err
+        }
+
+        return expression.NewLogical(left, op,  right), nil
+    }
+
+    return left, nil
+}
+
+func (p *Parser) logic_and() (expression.Expr, *ParseError) {
+    left, err := p.equality()
+    if err != nil {
+        return nil, err
+    }
+
+    if p.match(token.AND) {
+        op := p.previous()
+        right, err := p.logic_and()
+        if err != nil {
+            return nil, err
+        }
+
+        return expression.NewLogical(left, op, right), nil
+    }
+
+    return left, nil
 }
 
 func (p *Parser) equality() (expression.Expr, *ParseError) {
