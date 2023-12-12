@@ -100,5 +100,15 @@ func (s Var) Accept(v StatementVisitor) {
 
 
 type While struct {
+    Conditional expression.Expr
+    Stmt Statement
+}
+
+func NewWhileStmt(conditional expression.Expr, stmt Statement) While {
+    return While{Conditional: conditional, Stmt: stmt}
+}
+
+func (s While) Accept(v StatementVisitor) {
+    v.VisitWhileStmt(s)
 }
 

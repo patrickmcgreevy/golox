@@ -1,3 +1,8 @@
+var i = true;
+while (i) {
+    print i;
+    i = false;
+}
 2 or 2;
 var a = "global a";
 var b = "global b";

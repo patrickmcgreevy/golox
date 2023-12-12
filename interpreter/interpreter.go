@@ -375,4 +375,14 @@ func (v *Interpreter) VisitVarStmt(stmt statement.Var) {
 }
 
 func (v *Interpreter) VisitWhileStmt(stmt statement.While) {
+    var err *RuntimeError
+    var val any
+    for val, err = v.Evaluate(stmt.Conditional); err == nil && v.isTruthy(val); {
+        err = v.execute(stmt.Stmt)
+        if err != nil {
+            v.err = err
+            return
+        }
+    }
+    v.err = err
 }

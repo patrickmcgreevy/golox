@@ -5,6 +5,8 @@ import (
 	"golox/expression"
 	"golox/statement"
 	"golox/token"
+
+	"golang.org/x/exp/slices"
 )
 
 type Parser struct {
@@ -63,7 +65,106 @@ func (p *Parser) statement() (statement.Statement, *ParseError) {
         return p.ifStatement()
     }
 
+    if p.match(token.WHILE) {
+        return p.whileStatement()
+    }
+
     return p.expressionStatement()
+}
+
+func (p *Parser) forStatement() (statement.Statement, *ParseError) {
+    var initializer_stmt statement.Statement
+    var conditional_expr expression.Expr
+    var increment_expression expression.Expr
+    var loop_stmt statement.Statement
+
+    _, err := p.consume(token.LEFT_PAREN, "Expected '(' after 'for'.")
+    if err != nil {
+        return nil , err
+    }
+
+    if p.match(token.VAR) {
+        initializer_stmt, err = p.varDeclaration()
+        if err != nil {
+            return nil, err
+        }
+    } else if p.match(token.SEMICOLON) {
+        initializer_stmt = nil
+    } else {
+        initializer_stmt, err = p.expressionStatement()
+        if err != nil {
+            return nil, err
+        }
+    }
+    if p.match(token.SEMICOLON) {
+        conditional_expr = nil
+    } else {
+        conditional_expr, err = p.expression()
+        if err != nil {
+            return nil, err
+        }
+        _, err = p.consume(token.SEMICOLON, "Expected ';' after conditional expression.")
+        if err != nil {
+            return nil, err
+        }
+    }
+
+    if p.match(token.RIGHT_PAREN) {
+        increment_expression = nil
+    } else {
+        increment_expression, err = p.expression()
+        if err != nil {
+            return nil, err
+        }
+        _, err = p.consume(token.RIGHT_PAREN, "Expected ')' after expression")
+        return nil, err
+    }
+
+    loop_stmt, err = p.statement()
+    if err != nil {
+        return nil, err
+    }
+    if increment_expression != nil {
+        body := []statement.Statement{loop_stmt, statement.NewExpressionStmt(increment_expression)}
+        loop_stmt = statement.NewBlockStmt(body)
+    }
+    if conditional_expr == nil {
+        conditional_expr = expression.Literal{Value: true}
+    }
+    body := statement.NewWhileStmt(conditional_expr, loop_stmt)
+    if initializer_stmt != nil {
+        tmp := []statement.Statement{initializer_stmt, body}
+        body = statement.NewBlockStmt(tmp)
+    }
+
+    return // for stmt
+
+
+}
+
+func (p *Parser) whileStatement() (statement.Statement, *ParseError) {
+    var err *ParseError
+    _, err = p.consume(token.LEFT_PAREN, "Expected '(' after 'while'.")
+    if err != nil {
+        return nil, err
+    }
+
+    conditional_stmt, err := p.expression()
+    if err != nil {
+        return nil, err
+    }
+
+    _, err = p.consume(token.RIGHT_PAREN, "Expected ')' after conditional expression.")
+    if err != nil {
+        return nil, err
+    }
+
+    while_body, err := p.statement()
+    if err != nil {
+        return nil, err
+    }
+
+    return statement.NewWhileStmt(conditional_stmt, while_body), nil
 }
 
 func (p *Parser) ifStatement() (statement.Statement, *ParseError) {
@@ -470,5 +571,5 @@ func (e *ParseError) Error() string {
 }
 
 func NewParseError(message string) ParseError {
-	return ParseError{error: message}
+    return ParseError{error: "Parser Error: " + message}
 }
