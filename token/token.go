@@ -70,6 +70,7 @@ var KeywordMap = map[string]TokenType{
     "else": ELSE,
     "false": FALSE,
     "fun": FUN,
+    "for": FOR,
     "if": IF,
     "nil": NIL,
     "or": OR,

@@ -5,8 +5,6 @@ import (
 	"golox/expression"
 	"golox/statement"
 	"golox/token"
-
-	"golang.org/x/exp/slices"
 )
 
 type Parser struct {
@@ -69,6 +67,10 @@ func (p *Parser) statement() (statement.Statement, *ParseError) {
         return p.whileStatement()
     }
 
+    if p.match(token.FOR) {
+        return p.forStatement()
+    }
+
     return p.expressionStatement()
 }
 
@@ -117,7 +119,9 @@ func (p *Parser) forStatement() (statement.Statement, *ParseError) {
             return nil, err
         }
         _, err = p.consume(token.RIGHT_PAREN, "Expected ')' after expression")
-        return nil, err
+        if err != nil {
+            return nil, err
+        }
     }
 
     loop_stmt, err = p.statement()
@@ -131,13 +135,13 @@ func (p *Parser) forStatement() (statement.Statement, *ParseError) {
     if conditional_expr == nil {
         conditional_expr = expression.Literal{Value: true}
     }
-    body := statement.NewWhileStmt(conditional_expr, loop_stmt)
+    var body statement.Statement = statement.NewWhileStmt(conditional_expr, loop_stmt)
     if initializer_stmt != nil {
         tmp := []statement.Statement{initializer_stmt, body}
         body = statement.NewBlockStmt(tmp)
     }
 
-    return // for stmt
+    return body, nil // for stmt
 
 
 }

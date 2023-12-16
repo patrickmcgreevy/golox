@@ -1,8 +1,8 @@
 package statement
 
 import (
-    "golox/token"
 	"golox/expression"
+	"golox/token"
 )
 
 type StatementVisitor interface {
@@ -18,97 +18,94 @@ type StatementVisitor interface {
 }
 
 type Statement interface {
-    Accept(StatementVisitor)
+	Accept(StatementVisitor)
 }
 
 type Block struct {
-    statements []Statement
+	statements []Statement
 }
 
 func (s Block) Accept(v StatementVisitor) {
-    v.VisitBlockStmt(s)
+	v.VisitBlockStmt(s)
 }
 
 func NewBlockStmt(statments []Statement) Block {
-    return Block{statements: statments}
+	return Block{statements: statments}
 }
 
 func (s Block) GetStatements() []Statement {
-    return s.statements
+	return s.statements
 }
 
 type Class struct {
 }
 
 type Expression struct {
-    Val expression.Expr
+	Val expression.Expr
 }
 
 func NewExpressionStmt(val expression.Expr) Expression {
-    return Expression{Val: val}
+	return Expression{Val: val}
 }
 
 func (s Expression) Accept(v StatementVisitor) {
-    v.VisitExpressionStmt(s)
+	v.VisitExpressionStmt(s)
 }
 
 type Function struct {
 }
 
 type If struct {
-    Conditional expression.Expr
-    If_stmt Statement
-    Else_stmt Statement
+	Conditional expression.Expr
+	If_stmt     Statement
+	Else_stmt   Statement
 }
 
 func NewIfStatement(conitional expression.Expr, if_stmt, else_stmt Statement) If {
-    return If{Conditional: conitional, If_stmt: if_stmt, Else_stmt: else_stmt}
+	return If{Conditional: conitional, If_stmt: if_stmt, Else_stmt: else_stmt}
 }
 
 func (s If) Accept(v StatementVisitor) {
-    v.VisitIfStmt(s)
+	v.VisitIfStmt(s)
 }
 
 type Print struct {
-    Val expression.Expr
+	Val expression.Expr
 }
 
 func NewPrintStmt(val expression.Expr) Print {
-    return Print{Val: val}
+	return Print{Val: val}
 }
 
 func (s Print) Accept(v StatementVisitor) {
-    v.VisitPrintStmt(s)
+	v.VisitPrintStmt(s)
 }
 
 type Return struct {
 }
 
 type Var struct {
-    Initializer expression.Expr
-    Name token.Token
+	Initializer expression.Expr
+	Name        token.Token
 }
 
-func NewVarStmt( name token.Token, initializer expression.Expr) Var {
-    return Var{Initializer: initializer, Name: name}
+func NewVarStmt(name token.Token, initializer expression.Expr) Var {
+	return Var{Initializer: initializer, Name: name}
 }
 
 func (s Var) Accept(v StatementVisitor) {
-    v.VisitVarStmt(s)
+	v.VisitVarStmt(s)
 }
 
-
-
 type While struct {
-    Conditional expression.Expr
-    Stmt Statement
+	Conditional expression.Expr
+	Stmt        Statement
 }
 
 func NewWhileStmt(conditional expression.Expr, stmt Statement) While {
-    return While{Conditional: conditional, Stmt: stmt}
+	return While{Conditional: conditional, Stmt: stmt}
 }
 
 func (s While) Accept(v StatementVisitor) {
-    v.VisitWhileStmt(s)
+	v.VisitWhileStmt(s)
 }
-
