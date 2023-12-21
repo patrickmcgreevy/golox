@@ -5,9 +5,11 @@ import (
 	"golox/environment"
 	"golox/errorhandling"
 	"golox/expression"
+	"golox/lox_callable"
 	"golox/statement"
 	"golox/token"
 	"reflect"
+	"strings"
 )
 
 type RuntimeError struct {
@@ -38,14 +40,14 @@ func newOperandsError(operator token.Token) *RuntimeError {
 }
 
 type Interpreter struct {
-	val         any
-	err         *RuntimeError
-	pEnvironment *environment.Environment
-    interactiveMode bool
+	val             any
+	err             *RuntimeError
+	pEnvironment    *environment.Environment
+	interactiveMode bool
 }
 
 func NewInterpreter() Interpreter {
-    env := environment.NewEnvironment()
+	env := environment.NewEnvironment()
 	return Interpreter{val: nil, err: nil, pEnvironment: &env, interactiveMode: false}
 }
 
@@ -61,11 +63,11 @@ func (v *Interpreter) Interpret(statements []statement.Statement) {
 }
 
 func (v *Interpreter) EnableInteractiveMode() {
-    v.interactiveMode = true
+	v.interactiveMode = true
 }
 
 func (v *Interpreter) DisableInteractiveMode() {
-    v.interactiveMode = false
+	v.interactiveMode = false
 }
 
 func (v *Interpreter) execute(stmt statement.Statement) *RuntimeError {
@@ -77,23 +79,23 @@ func (v *Interpreter) execute(stmt statement.Statement) *RuntimeError {
 }
 
 func (v *Interpreter) executeBlock(statements []statement.Statement, env environment.Environment) {
-    v.pushEnvironment(&env)
-    defer v.popEnvironment()
-    for _, stmt := range statements {
-        v.execute(stmt)
-    }
+	v.pushEnvironment(&env)
+	defer v.popEnvironment()
+	for _, stmt := range statements {
+		v.execute(stmt)
+	}
 }
 
 func (v *Interpreter) pushEnvironment(env *environment.Environment) {
-    env.SetEnclosing(v.pEnvironment)
-    v.pEnvironment = env
+	env.SetEnclosing(v.pEnvironment)
+	v.pEnvironment = env
 }
 
 func (v *Interpreter) popEnvironment() {
-    parent := v.pEnvironment.GetEnclosing()
-    if parent != nil {
-        v.pEnvironment = parent
-    }
+	parent := v.pEnvironment.GetEnclosing()
+	if parent != nil {
+		v.pEnvironment = parent
+	}
 }
 
 func (v *Interpreter) Evaluate(e expression.Expr) (any, *RuntimeError) {
@@ -120,16 +122,16 @@ func (v Interpreter) isEqual(left, right any) bool {
 }
 
 func (v *Interpreter) VisitAssign(e expression.Assign) {
-    right, err := v.Evaluate(e.Value)
-    if err != nil {
-        v.err = err
-        return
-    }
-    assignment_error := v.pEnvironment.Assign(e.Name.Lexeme, right)
-    if assignment_error != nil {
-        err = newRuntimeError(e.Name, assignment_error.Error())
-        v.err = err
-    }
+	right, err := v.Evaluate(e.Value)
+	if err != nil {
+		v.err = err
+		return
+	}
+	assignment_error := v.pEnvironment.Assign(e.Name.Lexeme, right)
+	if assignment_error != nil {
+		err = newRuntimeError(e.Name, assignment_error.Error())
+		v.err = err
+	}
 }
 
 func (v *Interpreter) VisitBinary(e expression.Binary) {
@@ -225,26 +227,37 @@ func (v *Interpreter) VisitBinary(e expression.Binary) {
 }
 
 func (v *Interpreter) VisitCall(e expression.Call) {
-    args := []any{}
-    callee, err := v.Evaluate(e.Callee)
-    if err != nil {
-        v.err = err
+	args := []any{}
+	callee, err := v.Evaluate(e.Callee)
+	if err != nil {
+		v.err = err
+		return
+	}
+
+	for _, arg := range e.Args {
+		val, err := v.Evaluate(arg)
+		if err != nil {
+			v.err = err
+			return
+		}
+		args = append(args, val)
+	}
+
+	fmt.Println("callee ", callee, "args ", args)
+	// Call a loxcallable
+	lox_func, ok := callee.(loxcallable.LoxCallable)
+	if !ok {
+		v.err = newRuntimeError(e.Paren, "Can only call functions and classes.")
+		return
+	}
+
+	if len(args) != lox_func.Arity() {
+		v.err = newRuntimeError(e.Paren, fmt.Sprint("Expected", lox_func.Arity(), "arguments but got", len(args)))
         return
-    }
+	}
 
-    for _, arg := range e.Args {
-        val, err := v.Evaluate(arg)
-        if err != nil {
-            v.err = err
-            return
-        }
-        args = append(args, val)
-    }
-
-    fmt.Println("callee ", callee, "args ", args)
-    // Call a loxcallable
+	v.val = lox_func.Call(v, args)
 }
-
 
 func (v *Interpreter) VisitGrouping(e expression.Grouping) {
 	v.val, v.err = v.Evaluate(e.Expr)
@@ -260,47 +273,47 @@ func (v *Interpreter) VisitLiteral(e expression.Literal) {
 }
 
 func (v *Interpreter) VisitLogical(e expression.Logical) {
-    left, err := v.Evaluate(e.Left)
-    if err != nil {
-        v.err = err
-        return
-    }
+	left, err := v.Evaluate(e.Left)
+	if err != nil {
+		v.err = err
+		return
+	}
 
-    left_truth_value := v.isTruthy(left)
+	left_truth_value := v.isTruthy(left)
 
-    switch e.Operator.Token_type {
-    case token.OR:
-        if left_truth_value {
-            v.val = left
-            v.err = nil
-            return
-        } else {
-            right, err := v.Evaluate(e.Right)
-            if err != nil {
-                v.err = err
-                return
-            }
+	switch e.Operator.Token_type {
+	case token.OR:
+		if left_truth_value {
+			v.val = left
+			v.err = nil
+			return
+		} else {
+			right, err := v.Evaluate(e.Right)
+			if err != nil {
+				v.err = err
+				return
+			}
 
-            v.val = right
-            v.err = nil
-            return
-        }
-    case token.AND:
-        if !left_truth_value {
-            v.err = nil
-            v.val = left
-            return
-        } else {
-            right, err := v.Evaluate(e.Right)
-            if err != nil {
-                v.err = err
-                return
-            }
-            v.val = right
-            v.err = nil
-            return
-        }
-    }
+			v.val = right
+			v.err = nil
+			return
+		}
+	case token.AND:
+		if !left_truth_value {
+			v.err = nil
+			v.val = left
+			return
+		} else {
+			right, err := v.Evaluate(e.Right)
+			if err != nil {
+				v.err = err
+				return
+			}
+			v.val = right
+			v.err = nil
+			return
+		}
+	}
 }
 
 func (v *Interpreter) VisitUnary(e expression.Unary) {
@@ -323,52 +336,52 @@ func (v *Interpreter) VisitUnary(e expression.Unary) {
 }
 
 func (v *Interpreter) VisitVariable(e expression.Variable) {
-    val, err := v.pEnvironment.Get(e.GetToken())
-    if err != nil {
-        v.err = newRuntimeError(e.GetToken(), err.Error())
-        return
-    }
+	val, err := v.pEnvironment.Get(e.GetToken())
+	if err != nil {
+		v.err = newRuntimeError(e.GetToken(), err.Error())
+		return
+	}
 
-    v.val = val
+	v.val = val
 }
 
 func (v *Interpreter) VisitBlockStmt(stmt statement.Block) {
-    // Declare a new environment
-    // Execute all the declarations in the block
-    env := environment.NewEnvironment()
-    v.executeBlock(stmt.GetStatements(), env)
+	// Declare a new environment
+	// Execute all the declarations in the block
+	env := environment.NewEnvironment()
+	v.executeBlock(stmt.GetStatements(), env)
 }
 func (v *Interpreter) VisitClassStmt(stmt statement.Class) {
 }
 func (v *Interpreter) VisitExpressionStmt(stmt statement.Expression) {
-    val, err := v.Evaluate(stmt.Val)
-    if err == nil && v.interactiveMode {
-        fmt.Println(val)
-    }
+	val, err := v.Evaluate(stmt.Val)
+	if err == nil && v.interactiveMode {
+		fmt.Println(val)
+	}
 }
 func (v *Interpreter) VisitFunctionStmt(stmt statement.Function) {
 }
 func (v *Interpreter) VisitIfStmt(stmt statement.If) {
-    val, err := v.Evaluate(stmt.Conditional)
-    if err != nil {
-        v.err = err
-        return
-    }
-    if v.isTruthy(val) {
-        err := v.execute(stmt.If_stmt)
-        if err != nil {
-            v.err = err
-            return
-        }
-    } else {
-        if stmt.Else_stmt != nil {
-            err := v.execute(stmt.Else_stmt)
-            if err != nil {
-                v.err = err
-                return
-            }
-        }
-    }
+	val, err := v.Evaluate(stmt.Conditional)
+	if err != nil {
+		v.err = err
+		return
+	}
+	if v.isTruthy(val) {
+		err := v.execute(stmt.If_stmt)
+		if err != nil {
+			v.err = err
+			return
+		}
+	} else {
+		if stmt.Else_stmt != nil {
+			err := v.execute(stmt.Else_stmt)
+			if err != nil {
+				v.err = err
+				return
+			}
+		}
+	}
 }
 func (v *Interpreter) VisitPrintStmt(stmt statement.Print) {
 	val, err := v.Evaluate(stmt.Val)
@@ -384,7 +397,7 @@ func (v *Interpreter) VisitReturnStmt(stmt statement.Return) {
 
 func (v *Interpreter) VisitVarStmt(stmt statement.Var) {
 	var val any
-    var err *RuntimeError
+	var err *RuntimeError
 	if stmt.Initializer != nil {
 		val, err = v.Evaluate(stmt.Initializer)
 		if err != nil {
@@ -397,14 +410,14 @@ func (v *Interpreter) VisitVarStmt(stmt statement.Var) {
 }
 
 func (v *Interpreter) VisitWhileStmt(stmt statement.While) {
-    var err *RuntimeError
-    var val any
-    for val, err = v.Evaluate(stmt.Conditional); err == nil && v.isTruthy(val); val, err = v.Evaluate(stmt.Conditional) {
-        err = v.execute(stmt.Stmt)
-        if err != nil {
-            v.err = err
-            return
-        }
-    }
-    v.err = err
+	var err *RuntimeError
+	var val any
+	for val, err = v.Evaluate(stmt.Conditional); err == nil && v.isTruthy(val); val, err = v.Evaluate(stmt.Conditional) {
+		err = v.execute(stmt.Stmt)
+		if err != nil {
+			v.err = err
+			return
+		}
+	}
+	v.err = err
 }
