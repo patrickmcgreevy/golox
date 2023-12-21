@@ -448,7 +448,7 @@ func (p *Parser) unary() (expression.Expr, *ParseError) {
         return expression.Unary{Operator: operator, Right: right}, nil
     }
 
-    primary, err := p.primary()
+    primary, err := p.call()
 
 	if err != nil {
 		return expression.Unary{}, err
@@ -466,29 +466,20 @@ func (p *Parser) call() (expression.Expr, *ParseError) {
         return nil, err
     }
 
-    // if p.match(token.LEFT_PAREN) {
-    //     if p.match(token.RIGHT_PAREN) {
-    //         return // call expr no args
-    //     }
-    //     args, err := p.arguments()
-    //     if err != nil {
-    //         return nil, err
-    //     }
-    //
-    //     _, err = p.consume(token.RIGHT_PAREN, "Expected ')' after arguments.")
-    //     if err != nil {
-    //         return nil, err
-    //     }
-    //
-    //     return // call expr with args
-    // }
+    for ;p.match(token.LEFT_PAREN); {
+        expr, err = p.add_args(expr)
+        if err != nil {
+            return nil, err
+        }
+    }
 
     return expr, nil
 }
 
 func (p *Parser) add_args(expr expression.Expr) (expression.Expr, *ParseError) {
+    paren := p.previous()
     if p.match(token.RIGHT_PAREN) {
-        return // call expr no args, nil
+        return  expression.NewCall(expr, paren, nil), nil
     }
 
     args, err := p.arguments()
@@ -501,13 +492,16 @@ func (p *Parser) add_args(expr expression.Expr) (expression.Expr, *ParseError) {
         return nil, err
     }
 
-    return // call expr with args, nil
+    return expression.NewCall(expr, paren, args), nil // call expr with args, nil
 }
 
 func (p *Parser) arguments() ([]expression.Expr, *ParseError) {
     args := []expression.Expr{}
     var err *ParseError
     for cur_arg, err := p.expression(); err == nil; cur_arg, err = p.expression() {
+        if len(args) >= 255 {
+            p.error(p.peek(), "Can't have more than 255 argumens.")
+        }
         args = append(args, cur_arg)
         if !p.match(token.COMMA) {
             return args, nil

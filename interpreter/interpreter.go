@@ -224,6 +224,28 @@ func (v *Interpreter) VisitBinary(e expression.Binary) {
 	}
 }
 
+func (v *Interpreter) VisitCall(e expression.Call) {
+    args := []any{}
+    callee, err := v.Evaluate(e.Callee)
+    if err != nil {
+        v.err = err
+        return
+    }
+
+    for _, arg := range e.Args {
+        val, err := v.Evaluate(arg)
+        if err != nil {
+            v.err = err
+            return
+        }
+        args = append(args, val)
+    }
+
+    fmt.Println("callee ", callee, "args ", args)
+    // Call a loxcallable
+}
+
+
 func (v *Interpreter) VisitGrouping(e expression.Grouping) {
 	v.val, v.err = v.Evaluate(e.Expr)
 }
