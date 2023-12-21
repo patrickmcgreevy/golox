@@ -44,6 +44,20 @@ func (e Binary) Accept(v Visitor) {
     v.VisitBinary(e)
 }
 
+type Call struct {
+    callee Expr
+    paren token.Token
+    args []Expr
+}
+
+func NewCall(callee Expr, paren token.Token, args []Expr) Call {
+    return Call{callee: callee, paren: paren, args: args}
+}
+
+func (e Call) Accept(v Visitor) {
+    v.VisitCall(e)
+}
+
 type Grouping struct {
 	Expr Expr
 }
@@ -131,6 +145,18 @@ func (e Binary) Expand_to_string() string {
 	return sb.String()
 }
 
+func (e Call) Expand_to_string() string {
+    sb := strings.Builder{}
+    sb.WriteString(e.callee.Expand_to_string())
+    sb.WriteString("(arguments ")
+    for _, i := range e.args {
+        sb.WriteString(i.Expand_to_string())
+    }
+    sb.WriteString(")")
+
+    return sb.String()
+}
+
 func (e Grouping) Expand_to_string() string {
 	return parenthesize("grouping", e.Expr)
 }
@@ -167,6 +193,7 @@ func (e Variable) Expand_to_string() string {
 type Visitor interface {
     VisitAssign(e Assign)
     VisitBinary(e Binary)
+    VisitCall(e Call)
     VisitGrouping(e Grouping)
     VisitLiteral(e Literal)
     VisitLogical(e Logical)
@@ -187,7 +214,6 @@ func (v *ExpressionStringVisitor) Reset() {
 }
 
 func (v *ExpressionStringVisitor) parenthesize(name string, exprs ...Expr) {
-    // v.expr_string_builder.WriteString(name)
 	v.expr_string_builder.WriteString("(")
 	v.expr_string_builder.WriteString(name)
 	for _, val := range exprs {
@@ -205,6 +231,11 @@ func (v *ExpressionStringVisitor) VisitAssign(e Assign) {
 
 func (v *ExpressionStringVisitor) VisitBinary(e Binary) {
 	v.parenthesize(e.Operator.Lexeme, e.Left, e.Right)
+}
+
+func (v *ExpressionStringVisitor) VisitCall(e Call) {
+    e.callee.Accept(v)
+    v.parenthesize("arguments", e.args...)
 }
 
 func (v *ExpressionStringVisitor) VisitGrouping(e Grouping) {

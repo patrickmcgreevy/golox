@@ -457,6 +457,65 @@ func (p *Parser) unary() (expression.Expr, *ParseError) {
     return primary, nil
 }
 
+func (p *Parser) call() (expression.Expr, *ParseError) {
+    var expr expression.Expr
+    var err *ParseError
+
+    expr, err = p.primary()
+    if err != nil {
+        return nil, err
+    }
+
+    // if p.match(token.LEFT_PAREN) {
+    //     if p.match(token.RIGHT_PAREN) {
+    //         return // call expr no args
+    //     }
+    //     args, err := p.arguments()
+    //     if err != nil {
+    //         return nil, err
+    //     }
+    //
+    //     _, err = p.consume(token.RIGHT_PAREN, "Expected ')' after arguments.")
+    //     if err != nil {
+    //         return nil, err
+    //     }
+    //
+    //     return // call expr with args
+    // }
+
+    return expr, nil
+}
+
+func (p *Parser) add_args(expr expression.Expr) (expression.Expr, *ParseError) {
+    if p.match(token.RIGHT_PAREN) {
+        return // call expr no args, nil
+    }
+
+    args, err := p.arguments()
+    if err != nil {
+        return nil, err
+    }
+
+    _, err = p.consume(token.RIGHT_PAREN, "Expected ')' after arguments.")
+    if err != nil {
+        return nil, err
+    }
+
+    return // call expr with args, nil
+}
+
+func (p *Parser) arguments() ([]expression.Expr, *ParseError) {
+    args := []expression.Expr{}
+    var err *ParseError
+    for cur_arg, err := p.expression(); err == nil; cur_arg, err = p.expression() {
+        args = append(args, cur_arg)
+        if !p.match(token.COMMA) {
+            return args, nil
+        }
+    }
+    return nil, err
+}
+
 // primary        → NUMBER | STRING | "true" | "false" | "nil" | IDENTIFIER | (expression)
 //
 //	| "(" expression ")"
