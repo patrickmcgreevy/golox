@@ -8,7 +8,6 @@ import (
 	"golox/statement"
 	"golox/token"
 	"reflect"
-	"strings"
 )
 
 type RuntimeError struct {
