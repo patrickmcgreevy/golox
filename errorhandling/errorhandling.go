@@ -3,7 +3,6 @@ package errorhandling
 import "fmt"
 import "golox/token"
 
-
 func Report(line int, where, message string) {
 	fmt.Printf("[line %d] Error %s: '%s'\n", line, where, message)
 }
@@ -16,6 +15,6 @@ func Error(cur_token token.Token, message string) {
 	}
 }
 
-func RuntimeError(err error) { 
-    fmt.Println(err.Error())
+func RuntimeError(err error) {
+	fmt.Println(err.Error())
 }

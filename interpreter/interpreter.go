@@ -252,7 +252,7 @@ func (v *Interpreter) VisitCall(e expression.Call) {
 
 	if len(args) != lox_func.Arity() {
 		v.err = newRuntimeError(e.Paren, fmt.Sprint("Expected", lox_func.Arity(), "arguments but got", len(args)))
-        return
+		return
 	}
 
 	v.val = lox_func.Call(*v, args)

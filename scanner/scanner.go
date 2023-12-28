@@ -124,7 +124,7 @@ func (s *Scanner) scanToken() {
 		if unicode.IsDigit(c) {
 			s.tokenize_number()
 		} else if unicode.IsLetter(c) || c == '_' {
-            s.tokenize_identifier()
+			s.tokenize_identifier()
 		} else {
 			errorhandling.Report(s.line, s.source[s.start:s.current], "Unexpected character.")
 		}
@@ -143,8 +143,8 @@ func (s *Scanner) addTokenLiteral(t token.TokenType, literal any) {
 func (s *Scanner) tokenize_identifier() {
 	var identifier string
 
-	for c := s.peek(); unicode.IsDigit(c) || unicode.IsLetter(c) || c == '_'; c = s.peek(){
-         s.advance() 
+	for c := s.peek(); unicode.IsDigit(c) || unicode.IsLetter(c) || c == '_'; c = s.peek() {
+		s.advance()
 	}
 
 	identifier = s.source[s.start:s.current]
@@ -171,10 +171,10 @@ func (s *Scanner) tokenize_number() {
 	}
 
 	new_string = s.source[s.start:s.current]
-    num, err := strconv.ParseFloat(new_string, 64)
-    if err != nil {
-        panic("Not a number!")
-    }
+	num, err := strconv.ParseFloat(new_string, 64)
+	if err != nil {
+		panic("Not a number!")
+	}
 
 	s.addTokenLiteral(token.NUMBER, num)
 
@@ -234,9 +234,9 @@ func (s *Scanner) match(expected rune) bool {
 }
 
 func (s *Scanner) advance() rune {
-    if s.isAtEnd() {
-        return rune(0)
-    }
+	if s.isAtEnd() {
+		return rune(0)
+	}
 	r := s.source[s.current]
 	s.current += 1
 

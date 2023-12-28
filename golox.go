@@ -13,7 +13,7 @@ var hadError bool // Improvement idea: Implement an ErrorHandling interface so w
 var interp interpreter.Interpreter
 
 func main() {
-    interp = interpreter.NewInterpreter()
+	interp = interpreter.NewInterpreter()
 
 	if len(os.Args) > 2 {
 		panic("Need two or more args")
@@ -46,15 +46,15 @@ func runFile(path string) error {
 }
 
 func runPrompt() error {
-    interp.EnableInteractiveMode()
-    reader := bufio.NewReader(os.Stdin)
+	interp.EnableInteractiveMode()
+	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("> ")
-        line, err := reader.ReadString('\n')
+		line, err := reader.ReadString('\n')
 		if err != nil {
-           if err.Error() == "EOF" {
-                return nil
-            }
+			if err.Error() == "EOF" {
+				return nil
+			}
 			panic(err)
 		}
 		run(line)
@@ -65,12 +65,12 @@ func runPrompt() error {
 func run(source string) {
 	scanner := scanner.NewScanner(source)
 	tokens := scanner.ScanTokens()
-    parser := parser.NewParser(tokens)
+	parser := parser.NewParser(tokens)
 
-    statements := parser.Parse()
-    if statements == nil {
-        return
-    }
+	statements := parser.Parse()
+	if statements == nil {
+		return
+	}
 
-    interp.Interpret(statements)
+	interp.Interpret(statements)
 }
