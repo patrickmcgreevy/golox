@@ -5,7 +5,6 @@ import (
 	"golox/environment"
 	"golox/errorhandling"
 	"golox/expression"
-	"golox/lox_callable"
 	"golox/statement"
 	"golox/token"
 	"reflect"
@@ -245,7 +244,7 @@ func (v *Interpreter) VisitCall(e expression.Call) {
 
 	fmt.Println("callee ", callee, "args ", args)
 	// Call a loxcallable
-	lox_func, ok := callee.(loxcallable.LoxCallable)
+	lox_func, ok := callee.(LoxCallable)
 	if !ok {
 		v.err = newRuntimeError(e.Paren, "Can only call functions and classes.")
 		return
@@ -256,7 +255,7 @@ func (v *Interpreter) VisitCall(e expression.Call) {
         return
 	}
 
-	v.val = lox_func.Call(v, args)
+	v.val = lox_func.Call(*v, args)
 }
 
 func (v *Interpreter) VisitGrouping(e expression.Grouping) {
