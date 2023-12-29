@@ -3,8 +3,8 @@ package parser
 import (
 	"golox/errorhandling"
 	"golox/expression"
-	"golox/statement"
 	"golox/scanner"
+	"golox/statement"
 )
 
 type Parser struct {
@@ -17,7 +17,7 @@ func NewParser(tokens []scanner.Token) Parser {
 }
 
 func (p *Parser) Parse() []statement.Statement {
-    var statements []statement.Statement
+	var statements []statement.Statement
 	at_end := p.IsAtEnd()
 	for !at_end {
 		stmt, err := p.declaration()

@@ -1,6 +1,7 @@
 package scanner
 
 type TokenType int
+
 //go:generate stringer -type=TokenType
 
 const (

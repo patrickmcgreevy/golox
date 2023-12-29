@@ -5,8 +5,8 @@ import (
 	"golox/environment"
 	"golox/errorhandling"
 	"golox/expression"
-	"golox/statement"
 	"golox/scanner"
+	"golox/statement"
 	"reflect"
 )
 
@@ -225,7 +225,7 @@ func (v *Interpreter) VisitBinary(e expression.Binary) {
 }
 
 func (v *Interpreter) VisitCall(e expression.Call) {
-    var args []any
+	var args []any
 	callee, err := v.Evaluate(e.Callee)
 	if err != nil {
 		v.err = err
