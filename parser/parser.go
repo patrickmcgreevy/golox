@@ -4,15 +4,15 @@ import (
 	"golox/errorhandling"
 	"golox/expression"
 	"golox/statement"
-	"golox/token"
+	"golox/scanner"
 )
 
 type Parser struct {
-	tokens  []token.Token
+	tokens  []scanner.Token
 	current int
 }
 
-func NewParser(tokens []token.Token) Parser {
+func NewParser(tokens []scanner.Token) Parser {
 	return Parser{tokens: tokens, current: 0}
 }
 
@@ -35,7 +35,7 @@ func (p *Parser) Parse() []statement.Statement {
 func (p *Parser) declaration() (statement.Statement, *ParseError) {
 	var stmt statement.Statement
 	var err *ParseError
-	if p.match(token.VAR) {
+	if p.match(scanner.VAR) {
 		stmt, err = p.varDeclaration()
 	} else {
 		stmt, err = p.statement()
@@ -48,10 +48,10 @@ func (p *Parser) declaration() (statement.Statement, *ParseError) {
 }
 
 func (p *Parser) statement() (statement.Statement, *ParseError) {
-	if p.match(token.PRINT) {
+	if p.match(scanner.PRINT) {
 		return p.printStatement()
 	}
-	if p.match(token.LEFT_BRACE) {
+	if p.match(scanner.LEFT_BRACE) {
 		stmts, err := p.block()
 		if err != nil {
 			return nil, err
@@ -59,15 +59,15 @@ func (p *Parser) statement() (statement.Statement, *ParseError) {
 		return statement.NewBlockStmt(stmts), nil
 	}
 
-	if p.match(token.IF) {
+	if p.match(scanner.IF) {
 		return p.ifStatement()
 	}
 
-	if p.match(token.WHILE) {
+	if p.match(scanner.WHILE) {
 		return p.whileStatement()
 	}
 
-	if p.match(token.FOR) {
+	if p.match(scanner.FOR) {
 		return p.forStatement()
 	}
 
@@ -80,17 +80,17 @@ func (p *Parser) forStatement() (statement.Statement, *ParseError) {
 	var increment_expression expression.Expr
 	var loop_stmt statement.Statement
 
-	_, err := p.consume(token.LEFT_PAREN, "Expected '(' after 'for'.")
+	_, err := p.consume(scanner.LEFT_PAREN, "Expected '(' after 'for'.")
 	if err != nil {
 		return nil, err
 	}
 
-	if p.match(token.VAR) {
+	if p.match(scanner.VAR) {
 		initializer_stmt, err = p.varDeclaration()
 		if err != nil {
 			return nil, err
 		}
-	} else if p.match(token.SEMICOLON) {
+	} else if p.match(scanner.SEMICOLON) {
 		initializer_stmt = nil
 	} else {
 		initializer_stmt, err = p.expressionStatement()
@@ -98,27 +98,27 @@ func (p *Parser) forStatement() (statement.Statement, *ParseError) {
 			return nil, err
 		}
 	}
-	if p.match(token.SEMICOLON) {
+	if p.match(scanner.SEMICOLON) {
 		conditional_expr = nil
 	} else {
 		conditional_expr, err = p.expression()
 		if err != nil {
 			return nil, err
 		}
-		_, err = p.consume(token.SEMICOLON, "Expected ';' after conditional expression.")
+		_, err = p.consume(scanner.SEMICOLON, "Expected ';' after conditional expression.")
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if p.match(token.RIGHT_PAREN) {
+	if p.match(scanner.RIGHT_PAREN) {
 		increment_expression = nil
 	} else {
 		increment_expression, err = p.expression()
 		if err != nil {
 			return nil, err
 		}
-		_, err = p.consume(token.RIGHT_PAREN, "Expected ')' after expression")
+		_, err = p.consume(scanner.RIGHT_PAREN, "Expected ')' after expression")
 		if err != nil {
 			return nil, err
 		}
@@ -147,7 +147,7 @@ func (p *Parser) forStatement() (statement.Statement, *ParseError) {
 
 func (p *Parser) whileStatement() (statement.Statement, *ParseError) {
 	var err *ParseError
-	_, err = p.consume(token.LEFT_PAREN, "Expected '(' after 'while'.")
+	_, err = p.consume(scanner.LEFT_PAREN, "Expected '(' after 'while'.")
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +157,7 @@ func (p *Parser) whileStatement() (statement.Statement, *ParseError) {
 		return nil, err
 	}
 
-	_, err = p.consume(token.RIGHT_PAREN, "Expected ')' after conditional expression.")
+	_, err = p.consume(scanner.RIGHT_PAREN, "Expected ')' after conditional expression.")
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (p *Parser) whileStatement() (statement.Statement, *ParseError) {
 func (p *Parser) ifStatement() (statement.Statement, *ParseError) {
 	var else_stmt statement.Statement
 
-	_, err := p.consume(token.LEFT_PAREN, "Expected '(' after 'if'.")
+	_, err := p.consume(scanner.LEFT_PAREN, "Expected '(' after 'if'.")
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func (p *Parser) ifStatement() (statement.Statement, *ParseError) {
 		return nil, err
 	}
 
-	_, err = p.consume(token.RIGHT_PAREN, "Expected ')' after expression.")
+	_, err = p.consume(scanner.RIGHT_PAREN, "Expected ')' after expression.")
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (p *Parser) ifStatement() (statement.Statement, *ParseError) {
 		return nil, err
 	}
 
-	if p.match(token.ELSE) {
+	if p.match(scanner.ELSE) {
 		else_stmt, err = p.statement()
 	}
 	if err != nil {
@@ -209,7 +209,7 @@ func (p *Parser) printStatement() (statement.Statement, *ParseError) {
 	if err != nil {
 		return stmt, err
 	}
-	_, err = p.consume(token.SEMICOLON, "Expected ';' after value.")
+	_, err = p.consume(scanner.SEMICOLON, "Expected ';' after value.")
 	if err != nil {
 		// The semi colon after "false" is being consumed. I expect it's a scanning bug.
 		return stmt, err
@@ -224,7 +224,7 @@ func (p *Parser) expressionStatement() (statement.Statement, *ParseError) {
 	if err != nil {
 		return stmt, err
 	}
-	_, err = p.consume(token.SEMICOLON, "Expected ';' after statement.")
+	_, err = p.consume(scanner.SEMICOLON, "Expected ';' after statement.")
 	if err != nil {
 		return stmt, err
 	}
@@ -235,14 +235,14 @@ func (p *Parser) expressionStatement() (statement.Statement, *ParseError) {
 func (p *Parser) block() ([]statement.Statement, *ParseError) {
 	var statements []statement.Statement
 
-	for !p.check(token.RIGHT_BRACE) && !p.IsAtEnd() {
+	for !p.check(scanner.RIGHT_BRACE) && !p.IsAtEnd() {
 		stmt, err := p.declaration()
 		if err != nil {
 			return nil, err
 		}
 		statements = append(statements, stmt)
 	}
-	_, err := p.consume(token.RIGHT_BRACE, "Expect '}' after block.")
+	_, err := p.consume(scanner.RIGHT_BRACE, "Expect '}' after block.")
 	if err != nil {
 		return nil, err
 	}
@@ -254,11 +254,11 @@ func (p *Parser) varDeclaration() (statement.Statement, *ParseError) {
 	var initializer expression.Expr
 	var err *ParseError
 
-	name, err := p.consume(token.IDENTIFIER, "Expect variable name.")
+	name, err := p.consume(scanner.IDENTIFIER, "Expect variable name.")
 	if err != nil {
 		return nil, err
 	}
-	if p.match(token.EQUAL) {
+	if p.match(scanner.EQUAL) {
 		initializer, err = p.expression()
 	} else {
 		initializer = nil
@@ -267,7 +267,7 @@ func (p *Parser) varDeclaration() (statement.Statement, *ParseError) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = p.consume(token.SEMICOLON, "Expect ';' after variable declaration.")
+	_, err = p.consume(scanner.SEMICOLON, "Expect ';' after variable declaration.")
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +293,7 @@ func (p *Parser) assignment() (expression.Expr, *ParseError) {
 		return nil, err
 	}
 
-	if p.match(token.EQUAL) {
+	if p.match(scanner.EQUAL) {
 		right, err := p.assignment()
 		if err != nil {
 			return nil, err
@@ -316,7 +316,7 @@ func (p *Parser) logic_or() (expression.Expr, *ParseError) {
 		return nil, err
 	}
 
-	if p.match(token.OR) {
+	if p.match(scanner.OR) {
 		op := p.previous()
 		right, err := p.logic_or()
 		if err != nil {
@@ -335,7 +335,7 @@ func (p *Parser) logic_and() (expression.Expr, *ParseError) {
 		return nil, err
 	}
 
-	if p.match(token.AND) {
+	if p.match(scanner.AND) {
 		op := p.previous()
 		right, err := p.logic_and()
 		if err != nil {
@@ -358,7 +358,7 @@ func (p *Parser) equality() (expression.Expr, *ParseError) {
 	//  Current token is an equality Operator
 	//  Consume the equality operator, increment the token counter, and return a binary expression with Left: prefix, Operator: op, Right: p.equality()
 	// p.current += 1
-	if m := p.match(token.EQUAL_EQUAL, token.BANG_EQUAL); m {
+	if m := p.match(scanner.EQUAL_EQUAL, scanner.BANG_EQUAL); m {
 		op := p.previous()
 		right, err := p.equality()
 		if err != nil {
@@ -379,7 +379,7 @@ func (p *Parser) comparison() (expression.Expr, *ParseError) {
 		return expression.Unary{}, err
 	}
 
-	if p.match(token.GREATER, token.GREATER_EQUAL, token.LESS, token.LESS_EQUAL) {
+	if p.match(scanner.GREATER, scanner.GREATER_EQUAL, scanner.LESS, scanner.LESS_EQUAL) {
 		op := p.previous()
 		right, err := p.comparison()
 		if err != nil {
@@ -398,7 +398,7 @@ func (p *Parser) term() (expression.Expr, *ParseError) {
 		return expression.Unary{}, err
 	}
 
-	if p.match(token.MINUS, token.PLUS) {
+	if p.match(scanner.MINUS, scanner.PLUS) {
 		op := p.previous()
 		right, err := p.term()
 		if err != nil {
@@ -417,7 +417,7 @@ func (p *Parser) factor() (expression.Expr, *ParseError) {
 		return expression.Unary{}, err
 	}
 
-	if p.match(token.STAR, token.SLASH) {
+	if p.match(scanner.STAR, scanner.SLASH) {
 		op := p.previous()
 		right, err := p.factor()
 		if err != nil {
@@ -437,7 +437,7 @@ func (p *Parser) unary() (expression.Expr, *ParseError) {
 	var err *ParseError
 
 	// prefix := p.advance()
-	if p.match(token.BANG, token.MINUS) {
+	if p.match(scanner.BANG, scanner.MINUS) {
 		operator := p.previous()
 		right, err = p.unary()
 		if err != nil {
@@ -464,7 +464,7 @@ func (p *Parser) call() (expression.Expr, *ParseError) {
 		return nil, err
 	}
 
-	for p.match(token.LEFT_PAREN) {
+	for p.match(scanner.LEFT_PAREN) {
 		expr, err = p.add_args(expr)
 		if err != nil {
 			return nil, err
@@ -476,7 +476,7 @@ func (p *Parser) call() (expression.Expr, *ParseError) {
 
 func (p *Parser) add_args(expr expression.Expr) (expression.Expr, *ParseError) {
 	paren := p.previous()
-	if p.match(token.RIGHT_PAREN) {
+	if p.match(scanner.RIGHT_PAREN) {
 		return expression.NewCall(expr, paren, nil), nil
 	}
 
@@ -485,7 +485,7 @@ func (p *Parser) add_args(expr expression.Expr) (expression.Expr, *ParseError) {
 		return nil, err
 	}
 
-	_, err = p.consume(token.RIGHT_PAREN, "Expected ')' after arguments.")
+	_, err = p.consume(scanner.RIGHT_PAREN, "Expected ')' after arguments.")
 	if err != nil {
 		return nil, err
 	}
@@ -501,7 +501,7 @@ func (p *Parser) arguments() ([]expression.Expr, *ParseError) {
 			p.error(p.peek(), "Can't have more than 255 argumens.")
 		}
 		args = append(args, cur_arg)
-		if !p.match(token.COMMA) {
+		if !p.match(scanner.COMMA) {
 			return args, nil
 		}
 	}
@@ -514,28 +514,28 @@ func (p *Parser) arguments() ([]expression.Expr, *ParseError) {
 func (p *Parser) primary() (expression.Expr, *ParseError) {
 	var err *ParseError
 	var expr expression.Expr
-	if p.match(token.FALSE) {
+	if p.match(scanner.FALSE) {
 		return expression.Literal{Value: false}, nil
 	}
-	if p.match(token.TRUE) {
+	if p.match(scanner.TRUE) {
 		return expression.Literal{Value: true}, nil
 	}
-	if p.match(token.NIL) {
+	if p.match(scanner.NIL) {
 		return expression.Literal{Value: nil}, nil
 	}
-	if p.match(token.STRING, token.NUMBER) {
+	if p.match(scanner.STRING, scanner.NUMBER) {
 		return expression.Literal{Value: p.previous().Literal}, nil
 	}
-	if p.match(token.LEFT_PAREN) {
+	if p.match(scanner.LEFT_PAREN) {
 		expr, err = p.expression()
-		_, err = p.consume(token.RIGHT_PAREN, "Expected right paren!")
+		_, err = p.consume(scanner.RIGHT_PAREN, "Expected right paren!")
 		if err != nil {
 			return expression.Unary{}, err
 		}
 
 		return expression.Grouping{Expr: expr}, nil
 	}
-	if p.match(token.IDENTIFIER) {
+	if p.match(scanner.IDENTIFIER) {
 		return expression.NewVariableExpression(p.previous()), nil
 	}
 	parse_error := p.error(p.peek(), "Expect expression.")
@@ -549,12 +549,12 @@ func (p *Parser) syncronize() {
 	p.advance()
 
 	for !p.IsAtEnd() {
-		if p.previous().Token_type == token.SEMICOLON {
+		if p.previous().Token_type == scanner.SEMICOLON {
 			return
 		}
 		t := p.peek().Token_type
 		switch t {
-		case token.CLASS, token.FUN, token.VAR, token.FOR, token.IF, token.WHILE, token.PRINT, token.RETURN:
+		case scanner.CLASS, scanner.FUN, scanner.VAR, scanner.FOR, scanner.IF, scanner.WHILE, scanner.PRINT, scanner.RETURN:
 			return
 		}
 
@@ -562,7 +562,7 @@ func (p *Parser) syncronize() {
 	}
 }
 
-func (p *Parser) match(token_type ...token.TokenType) bool {
+func (p *Parser) match(token_type ...scanner.TokenType) bool {
 	for _, v := range token_type {
 		if p.check(v) {
 			p.advance()
@@ -573,14 +573,14 @@ func (p *Parser) match(token_type ...token.TokenType) bool {
 	return false
 }
 
-func (p Parser) check(token_type token.TokenType) bool {
+func (p Parser) check(token_type scanner.TokenType) bool {
 	if p.IsAtEnd() {
 		return false
 	}
 	return p.peek().Token_type == token_type
 }
 
-func (p *Parser) advance() token.Token {
+func (p *Parser) advance() scanner.Token {
 	if !p.IsAtEnd() {
 		p.current += 1
 	}
@@ -590,31 +590,34 @@ func (p *Parser) advance() token.Token {
 	return ret
 }
 
-func (p *Parser) consume(tokenType token.TokenType, message string) (token.Token, *ParseError) {
+func (p *Parser) consume(tokenType scanner.TokenType, message string) (scanner.Token, *ParseError) {
 	if p.check(tokenType) {
 		return p.advance(), nil
 	}
 	error := p.error(p.peek(), message)
 
-	return token.Token{}, &error
+	return scanner.Token{}, &error
 }
 
-func (p Parser) error(token token.Token, message string) ParseError {
-	errorhandling.Error(token, message)
-
+func (p Parser) error(token scanner.Token, message string) ParseError {
+	if token.Token_type == scanner.EOF {
+		errorhandling.Report(token.Line, " at end ", message)
+	} else {
+		errorhandling.Report(token.Line, " at "+token.Lexeme, message)
+	}
 	return NewParseError(message)
 }
 
-func (p Parser) peek() token.Token {
+func (p Parser) peek() scanner.Token {
 	return p.tokens[p.current]
 }
 
-func (p Parser) previous() token.Token {
+func (p Parser) previous() scanner.Token {
 	return p.tokens[p.current-1]
 }
 
 func (p Parser) IsAtEnd() bool {
-	return p.peek().Token_type == token.EOF
+	return p.peek().Token_type == scanner.EOF
 }
 
 type ParseError struct {

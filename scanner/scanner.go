@@ -2,32 +2,31 @@ package scanner
 
 import (
 	"golox/errorhandling"
-	"golox/token"
 	"strconv"
 	"unicode"
 )
 
 type Scanner struct {
 	source               string
-	tokens               []token.Token
+	tokens               []Token
 	start, current, line int
 }
 
 func NewScanner(source string) *Scanner {
-	ret := Scanner{source: source, tokens: []token.Token{}, start: 0, current: 0, line: 1}
+	ret := Scanner{source: source, tokens: []Token{}, start: 0, current: 0, line: 1}
 
 	return &ret
 }
 
-func (s *Scanner) ScanTokens() []token.Token {
+func (s *Scanner) ScanTokens() []Token {
 	for !s.isAtEnd() {
 		s.start = s.current
 		s.scanToken()
 	}
 	s.tokens = append(
 		s.tokens,
-		token.Token{
-			Token_type: token.EOF,
+		Token{
+			Token_type: EOF,
 			Lexeme:     "",
 			Literal:    nil,
 			Line:       s.line,
@@ -38,74 +37,74 @@ func (s *Scanner) ScanTokens() []token.Token {
 }
 
 func (s *Scanner) scanToken() {
-	var t token.TokenType
+	var t TokenType
 	c := s.advance()
 	switch c {
 	case '(':
-		s.addToken(token.LEFT_PAREN)
+		s.addToken(LEFT_PAREN)
 
 	case ')':
-		s.addToken(token.RIGHT_PAREN)
+		s.addToken(RIGHT_PAREN)
 
 	case '{':
-		s.addToken(token.LEFT_BRACE)
+		s.addToken(LEFT_BRACE)
 
 	case '}':
-		s.addToken(token.RIGHT_BRACE)
+		s.addToken(RIGHT_BRACE)
 
 	case ',':
-		s.addToken(token.COMMA)
+		s.addToken(COMMA)
 
 	case '.':
-		s.addToken(token.DOT)
+		s.addToken(DOT)
 
 	case '-':
-		s.addToken(token.MINUS)
+		s.addToken(MINUS)
 
 	case '+':
-		s.addToken(token.PLUS)
+		s.addToken(PLUS)
 
 	case ';':
-		s.addToken(token.SEMICOLON)
+		s.addToken(SEMICOLON)
 
 	case '*':
-		s.addToken(token.STAR)
+		s.addToken(STAR)
 
 	case '!':
 		if s.match('=') {
-			t = token.BANG_EQUAL
+			t = BANG_EQUAL
 		} else {
-			t = token.BANG
+			t = BANG
 		}
 		s.addToken(t)
 
 	case '=':
 		if s.match('=') {
-			t = token.EQUAL_EQUAL
+			t = EQUAL_EQUAL
 		} else {
-			t = token.EQUAL
+			t = EQUAL
 		}
 		s.addToken(t)
 
 	case '<':
 		if s.match('=') {
-			t = token.LESS_EQUAL
+			t = LESS_EQUAL
 		} else {
-			t = token.LESS
+			t = LESS
 		}
 		s.addToken(t)
 
 	case '>':
 		if s.match('=') {
-			t = token.GREATER_EQUAL
+			t = GREATER_EQUAL
 		} else {
-			t = token.GREATER
+			t = GREATER
 		}
 		s.addToken(t)
 
 	case '/':
 		if !s.match('/') {
-			s.addToken(token.SLASH)
+			s.addToken(SLASH)
 		} else {
 			for s.peek() != '\n' && !s.isAtEnd() {
 				s.advance()
@@ -131,13 +130,13 @@ func (s *Scanner) scanToken() {
 	}
 }
 
-func (s *Scanner) addToken(t token.TokenType) {
+func (s *Scanner) addToken(t TokenType) {
 	s.addTokenLiteral(t, nil)
 }
 
-func (s *Scanner) addTokenLiteral(t token.TokenType, literal any) {
+func (s *Scanner) addTokenLiteral(t TokenType, literal any) {
 	text := s.source[s.start:s.current]
-	s.tokens = append(s.tokens, token.Token{Token_type: t, Lexeme: text, Literal: literal, Line: s.line})
+	s.tokens = append(s.tokens, Token{Token_type: t, Lexeme: text, Literal: literal, Line: s.line})
 }
 
 func (s *Scanner) tokenize_identifier() {
@@ -149,10 +148,10 @@ func (s *Scanner) tokenize_identifier() {
 
 	identifier = s.source[s.start:s.current]
 
-	if token.KeywordMap[identifier] != 0 {
-		s.addToken(token.KeywordMap[identifier])
+	if KeywordMap[identifier] != 0 {
+		s.addToken(KeywordMap[identifier])
 	} else {
-		s.addToken(token.IDENTIFIER)
+		s.addToken(IDENTIFIER)
 	}
 
 }
@@ -176,7 +175,7 @@ func (s *Scanner) tokenize_number() {
 		panic("Not a number!")
 	}
 
-	s.addTokenLiteral(token.NUMBER, num)
+	s.addTokenLiteral(NUMBER, num)
 
 	// var decimal bool = false
 	// var c rune
@@ -198,7 +197,7 @@ func (s *Scanner) tokenize_number() {
 	//
 	// new_string = s.source[s.start:s.current]
 	//
-	// s.addTokenLiteral(token.NUMBER, &new_string)
+	// s.addTokenLiteral(NUMBER, &new_string)
 }
 
 func (s *Scanner) tokenize_string() {
@@ -219,7 +218,7 @@ func (s *Scanner) tokenize_string() {
 	s.advance()
 	new_string = s.source[s.start+1 : s.current-1]
 
-	s.addTokenLiteral(token.STRING, &new_string)
+	s.addTokenLiteral(STRING, &new_string)
 
 }
 

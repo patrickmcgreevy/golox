@@ -2,7 +2,7 @@ package statement
 
 import (
 	"golox/expression"
-	"golox/token"
+	"golox/scanner"
 )
 
 type StatementVisitor interface {
@@ -86,10 +86,10 @@ type Return struct {
 
 type Var struct {
 	Initializer expression.Expr
-	Name        token.Token
+	Name        scanner.Token
 }
 
-func NewVarStmt(name token.Token, initializer expression.Expr) Var {
+func NewVarStmt(name scanner.Token, initializer expression.Expr) Var {
 	return Var{Initializer: initializer, Name: name}
 }
 

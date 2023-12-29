@@ -2,7 +2,7 @@ package environment
 
 import (
 	"fmt"
-	"golox/token"
+	"golox/scanner"
 )
 
 type undefinedVariableError struct {
@@ -47,7 +47,7 @@ func (e *Environment) Assign(name string, value any) error {
 	return nil
 }
 
-func (e Environment) Get(name token.Token) (any, error) {
+func (e Environment) Get(name scanner.Token) (any, error) {
 	var err undefinedVariableError
 	val, ok := e.values[name.Lexeme]
 	if ok {

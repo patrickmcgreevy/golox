@@ -2,7 +2,7 @@ package expression
 
 import (
 	"fmt"
-	"golox/token"
+	"golox/scanner"
 	"strconv"
 	"strings"
 )
@@ -26,7 +26,7 @@ func parenthesize(name string, exprs ...Expr) string {
 }
 
 type Assign struct {
-	Name  token.Token
+	Name  scanner.Token
 	Value Expr
 }
 
@@ -36,7 +36,7 @@ func (e Assign) Accept(v Visitor) {
 
 type Binary struct {
 	Left     Expr
-	Operator token.Token
+	Operator scanner.Token
 	Right    Expr
 }
 
@@ -46,11 +46,11 @@ func (e Binary) Accept(v Visitor) {
 
 type Call struct {
 	Callee Expr
-	Paren  token.Token
+	Paren  scanner.Token
 	Args   []Expr
 }
 
-func NewCall(callee Expr, paren token.Token, args []Expr) Call {
+func NewCall(callee Expr, paren scanner.Token, args []Expr) Call {
 	return Call{Callee: callee, Paren: paren, Args: args}
 }
 
@@ -76,11 +76,11 @@ func (e Literal) Accept(v Visitor) {
 
 type Logical struct {
 	Left     Expr
-	Operator token.Token
+	Operator scanner.Token
 	Right    Expr
 }
 
-func NewLogical(left Expr, operator token.Token, right Expr) Logical {
+func NewLogical(left Expr, operator scanner.Token, right Expr) Logical {
 	return Logical{Left: left, Operator: operator, Right: right}
 }
 
@@ -99,7 +99,7 @@ func (e Logical) Expand_to_string() string {
 }
 
 type Unary struct {
-	Operator token.Token
+	Operator scanner.Token
 	Right    Expr
 }
 
@@ -108,10 +108,10 @@ func (e Unary) Accept(v Visitor) {
 }
 
 type Variable struct {
-	name token.Token
+	name scanner.Token
 }
 
-func NewVariableExpression(name token.Token) Variable {
+func NewVariableExpression(name scanner.Token) Variable {
 	return Variable{name: name}
 }
 
@@ -123,7 +123,7 @@ func (e Variable) GetName() string {
 	return e.name.Lexeme
 }
 
-func (e Variable) GetToken() token.Token {
+func (e Variable) GetToken() scanner.Token {
 	return e.name
 }
 

@@ -6,34 +6,34 @@ import (
 	"golox/errorhandling"
 	"golox/expression"
 	"golox/statement"
-	"golox/token"
+	"golox/scanner"
 	"reflect"
 )
 
 type RuntimeError struct {
 	error string
-	tok   token.Token
+	tok   scanner.Token
 }
 
 func (e RuntimeError) Error() string {
 	return e.error
 }
 
-func (e RuntimeError) GetToken() token.Token {
+func (e RuntimeError) GetToken() scanner.Token {
 	return e.tok
 }
 
-func newRuntimeError(operator token.Token, message string) *RuntimeError {
+func newRuntimeError(operator scanner.Token, message string) *RuntimeError {
 	msg := fmt.Sprintf("[line %d]: %s", operator.Line, message)
 	new_err := RuntimeError{error: msg, tok: operator}
 	return &new_err
 }
 
-func newNumberError(operator token.Token) *RuntimeError {
+func newNumberError(operator scanner.Token) *RuntimeError {
 	return newRuntimeError(operator, "Operand must be a number.")
 }
 
-func newOperandsError(operator token.Token) *RuntimeError {
+func newOperandsError(operator scanner.Token) *RuntimeError {
 	return newRuntimeError(operator, "Operands must be numbers.")
 }
 
@@ -144,14 +144,14 @@ func (v *Interpreter) VisitBinary(e expression.Binary) {
 		return
 	}
 	switch e.Operator.Token_type {
-	case token.MINUS:
+	case scanner.MINUS:
 		l, l_ok := left.(float64)
 		r, r_ok := right.(float64)
 		if !(l_ok && r_ok) {
 			v.err = newOperandsError(e.Operator)
 		}
 		v.val = l - r
-	case token.PLUS:
+	case scanner.PLUS:
 		l_float, l_ok := left.(float64)
 		r_float, r_ok := right.(float64)
 		if l_ok && r_ok {
@@ -168,7 +168,7 @@ func (v *Interpreter) VisitBinary(e expression.Binary) {
 		}
 		v.err = newRuntimeError(e.Operator, "Operands must be two numbers or two strings")
 
-	case token.SLASH:
+	case scanner.SLASH:
 		l, l_ok := left.(float64)
 		r, r_ok := right.(float64)
 		if !(l_ok && r_ok) {
@@ -176,7 +176,7 @@ func (v *Interpreter) VisitBinary(e expression.Binary) {
 		}
 		v.val = l / r
 
-	case token.STAR:
+	case scanner.STAR:
 		l, l_ok := left.(float64)
 		r, r_ok := right.(float64)
 		if !(l_ok && r_ok) {
@@ -184,7 +184,7 @@ func (v *Interpreter) VisitBinary(e expression.Binary) {
 		}
 		v.val = l * r
 
-	case token.GREATER:
+	case scanner.GREATER:
 		l, l_ok := left.(float64)
 		r, r_ok := right.(float64)
 		if !(l_ok && r_ok) {
@@ -192,7 +192,7 @@ func (v *Interpreter) VisitBinary(e expression.Binary) {
 		}
 		v.val = l > r
 
-	case token.GREATER_EQUAL:
+	case scanner.GREATER_EQUAL:
 		l, l_ok := left.(float64)
 		r, r_ok := right.(float64)
 		if !(l_ok && r_ok) {
@@ -200,7 +200,7 @@ func (v *Interpreter) VisitBinary(e expression.Binary) {
 		}
 		v.val = l >= r
 
-	case token.LESS:
+	case scanner.LESS:
 		l, l_ok := left.(float64)
 		r, r_ok := right.(float64)
 		if !(l_ok && r_ok) {
@@ -208,7 +208,7 @@ func (v *Interpreter) VisitBinary(e expression.Binary) {
 		}
 		v.val = l < r
 
-	case token.LESS_EQUAL:
+	case scanner.LESS_EQUAL:
 		l, l_ok := left.(float64)
 		r, r_ok := right.(float64)
 		if !(l_ok && r_ok) {
@@ -216,10 +216,10 @@ func (v *Interpreter) VisitBinary(e expression.Binary) {
 		}
 		v.val = l <= r
 
-	case token.BANG_EQUAL:
+	case scanner.BANG_EQUAL:
 		v.val = !v.isEqual(left, right)
 
-	case token.EQUAL_EQUAL:
+	case scanner.EQUAL_EQUAL:
 		v.val = v.isEqual(left, right)
 	}
 }
@@ -280,7 +280,7 @@ func (v *Interpreter) VisitLogical(e expression.Logical) {
 	left_truth_value := v.isTruthy(left)
 
 	switch e.Operator.Token_type {
-	case token.OR:
+	case scanner.OR:
 		if left_truth_value {
 			v.val = left
 			v.err = nil
@@ -296,7 +296,7 @@ func (v *Interpreter) VisitLogical(e expression.Logical) {
 			v.err = nil
 			return
 		}
-	case token.AND:
+	case scanner.AND:
 		if !left_truth_value {
 			v.err = nil
 			v.val = left
@@ -322,13 +322,13 @@ func (v *Interpreter) VisitUnary(e expression.Unary) {
 	}
 	t := e.Operator.Token_type
 	switch t {
-	case token.MINUS:
+	case scanner.MINUS:
 		r, ok := right.(float64)
 		if !ok {
 			v.err = newNumberError(e.Operator)
 		}
 		v.val = -r
-	case token.BANG:
+	case scanner.BANG:
 		v.val = v.isTruthy(right)
 	}
 }
