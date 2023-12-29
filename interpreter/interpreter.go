@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"fmt"
-	"golox/environment"
 	"golox/errorhandling"
 	"golox/expression"
 	"golox/scanner"
@@ -40,12 +39,12 @@ func newOperandsError(operator scanner.Token) *RuntimeError {
 type Interpreter struct {
 	val             any
 	err             *RuntimeError
-	pEnvironment    *environment.Environment
+	pEnvironment    *Environment
 	interactiveMode bool
 }
 
 func NewInterpreter() Interpreter {
-	env := environment.NewEnvironment()
+	env := NewEnvironment()
 	return Interpreter{val: nil, err: nil, pEnvironment: &env, interactiveMode: false}
 }
 
@@ -76,7 +75,7 @@ func (v *Interpreter) execute(stmt statement.Statement) *RuntimeError {
 	return nil
 }
 
-func (v *Interpreter) executeBlock(statements []statement.Statement, env environment.Environment) {
+func (v *Interpreter) executeBlock(statements []statement.Statement, env Environment) {
 	v.pushEnvironment(&env)
 	defer v.popEnvironment()
 	for _, stmt := range statements {
@@ -84,7 +83,7 @@ func (v *Interpreter) executeBlock(statements []statement.Statement, env environ
 	}
 }
 
-func (v *Interpreter) pushEnvironment(env *environment.Environment) {
+func (v *Interpreter) pushEnvironment(env *Environment) {
 	env.SetEnclosing(v.pEnvironment)
 	v.pEnvironment = env
 }
@@ -346,7 +345,7 @@ func (v *Interpreter) VisitVariable(e expression.Variable) {
 func (v *Interpreter) VisitBlockStmt(stmt statement.Block) {
 	// Declare a new environment
 	// Execute all the declarations in the block
-	env := environment.NewEnvironment()
+	env := NewEnvironment()
 	v.executeBlock(stmt.GetStatements(), env)
 }
 func (v *Interpreter) VisitClassStmt(stmt statement.Class) {
