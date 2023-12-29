@@ -17,7 +17,7 @@ func NewParser(tokens []token.Token) Parser {
 }
 
 func (p *Parser) Parse() []statement.Statement {
-	statements := []statement.Statement{}
+    var statements []statement.Statement
 	at_end := p.IsAtEnd()
 	for !at_end {
 		stmt, err := p.declaration()
@@ -233,7 +233,7 @@ func (p *Parser) expressionStatement() (statement.Statement, *ParseError) {
 }
 
 func (p *Parser) block() ([]statement.Statement, *ParseError) {
-	statements := []statement.Statement{}
+	var statements []statement.Statement
 
 	for !p.check(token.RIGHT_BRACE) && !p.IsAtEnd() {
 		stmt, err := p.declaration()
@@ -494,7 +494,7 @@ func (p *Parser) add_args(expr expression.Expr) (expression.Expr, *ParseError) {
 }
 
 func (p *Parser) arguments() ([]expression.Expr, *ParseError) {
-	args := []expression.Expr{}
+	var args []expression.Expr
 	var err *ParseError
 	for cur_arg, err := p.expression(); err == nil; cur_arg, err = p.expression() {
 		if len(args) >= 255 {
