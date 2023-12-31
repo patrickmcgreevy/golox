@@ -7,7 +7,13 @@ import (
 	"golox/scanner"
 	"golox/statement"
 	"reflect"
+	"time"
 )
+
+type LoxCallable interface {
+	Call(interp Interpreter, args []any) any
+	Arity() int
+}
 
 type RuntimeError struct {
 	error string
@@ -45,6 +51,10 @@ type Interpreter struct {
 
 func NewInterpreter() Interpreter {
 	env := NewEnvironment()
+
+	env.Define("clock", BuiltinCallable{params: make([]string, 0), foo: func(a Interpreter, b []any) any {
+		return float64(time.Now().UnixMilli())/1000
+	}})
 	return Interpreter{val: nil, err: nil, pEnvironment: &env, interactiveMode: false}
 }
 
@@ -240,7 +250,6 @@ func (v *Interpreter) VisitCall(e expression.Call) {
 		args = append(args, val)
 	}
 
-	fmt.Println("callee ", callee, "args ", args)
 	// Call a loxcallable
 	lox_func, ok := callee.(LoxCallable)
 	if !ok {
@@ -357,6 +366,10 @@ func (v *Interpreter) VisitExpressionStmt(stmt statement.Expression) {
 	}
 }
 func (v *Interpreter) VisitFunctionStmt(stmt statement.Function) {
+    var funcDef UserCallable
+    funcDef.declaration = stmt
+
+    v.pEnvironment.Define(stmt.Name.Lexeme, funcDef)
 }
 func (v *Interpreter) VisitIfStmt(stmt statement.If) {
 	val, err := v.Evaluate(stmt.Conditional)

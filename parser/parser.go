@@ -37,7 +37,9 @@ func (p *Parser) declaration() (statement.Statement, *ParseError) {
 	var err *ParseError
 	if p.match(scanner.VAR) {
 		stmt, err = p.varDeclaration()
-	} else {
+	} else if p.match(scanner.FUN) {
+        stmt, err = p.funcDeclaration()
+    } else {
 		stmt, err = p.statement()
 	}
 	if err != nil {
@@ -51,7 +53,7 @@ func (p *Parser) statement() (statement.Statement, *ParseError) {
 	if p.match(scanner.PRINT) {
 		return p.printStatement()
 	}
-	if p.match(scanner.LEFT_BRACE) {
+	if p.peek().Token_type == scanner.LEFT_BRACE {
 		stmts, err := p.block()
 		if err != nil {
 			return nil, err
@@ -234,6 +236,11 @@ func (p *Parser) expressionStatement() (statement.Statement, *ParseError) {
 
 func (p *Parser) block() ([]statement.Statement, *ParseError) {
 	var statements []statement.Statement
+ 
+    _, err := p.consume(scanner.LEFT_BRACE, "expected '{'")
+    if err != nil {
+        return nil, err
+    }
 
 	for !p.check(scanner.RIGHT_BRACE) && !p.IsAtEnd() {
 		stmt, err := p.declaration()
@@ -242,12 +249,75 @@ func (p *Parser) block() ([]statement.Statement, *ParseError) {
 		}
 		statements = append(statements, stmt)
 	}
-	_, err := p.consume(scanner.RIGHT_BRACE, "Expect '}' after block.")
+	_, err = p.consume(scanner.RIGHT_BRACE, "Expect '}' after block.")
 	if err != nil {
 		return nil, err
 	}
 
 	return statements, nil
+}
+
+func (p *Parser) funcDeclaration() (statement.Statement, *ParseError) {
+    // function
+    return p.function()
+}
+
+func (p *Parser) function() (statement.Statement, *ParseError) {
+    var funcId scanner.Token
+    var err ParseError
+    var identifers []scanner.Token
+
+    if !p.match(scanner.IDENTIFIER) {
+        err = NewParseError("expected an identifer.")
+        return nil, &err
+    }
+    funcId = p.previous()
+
+    _, pErr := p.consume(scanner.LEFT_PAREN, "expected '('.")
+    if pErr != nil {
+        return nil, pErr
+    }
+
+    if p.peek().Token_type != scanner.RIGHT_PAREN {
+        identifers, pErr = p.identifiers()
+        if pErr != nil {
+            return nil, pErr
+        }
+    }
+
+    _, pErr = p.consume(scanner.RIGHT_PAREN, "expected ')'.")
+    if pErr != nil {
+        return nil, pErr
+    }
+    
+    block, pErr := p.block()
+    if pErr != nil {
+        return nil, pErr
+    }
+
+    return statement.Function{Name: funcId, Params: identifers, Body: block}, nil 
+}
+
+func (p *Parser) identifiers() ([]scanner.Token, *ParseError) {
+    // parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
+    var tokens []scanner.Token
+    var err ParseError
+
+    if !p.match(scanner.IDENTIFIER) {
+        err = NewParseError("expected an idenifier.")
+        return nil, &err
+    }
+    tokens = append(tokens, p.previous())
+
+    if p.match(scanner.COMMA) {
+        val, pErr := p.identifiers()
+        if pErr != nil {
+            return nil, pErr
+        }
+        return append(tokens,  val...), nil
+    }
+
+   return tokens, nil 
 }
 
 func (p *Parser) varDeclaration() (statement.Statement, *ParseError) {
@@ -276,15 +346,6 @@ func (p *Parser) varDeclaration() (statement.Statement, *ParseError) {
 
 func (p *Parser) expression() (expression.Expr, *ParseError) {
 	return p.assignment()
-	// expr, err := p.assignment()
-	// if error
-	// p.equality
-
-	//    expr, err := p.equality()
-	//    if err != nil {
-	//        return expression.Unary{}, err
-	//    }
-	// return expr, nil
 }
 
 func (p *Parser) assignment() (expression.Expr, *ParseError) {

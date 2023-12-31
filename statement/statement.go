@@ -53,6 +53,13 @@ func (s Expression) Accept(v StatementVisitor) {
 }
 
 type Function struct {
+    Name scanner.Token
+    Params []scanner.Token
+    Body []Statement
+}
+
+func (s Function) Accept(v StatementVisitor) {
+    v.VisitFunctionStmt(s)
 }
 
 type If struct {
