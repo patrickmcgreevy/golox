@@ -89,6 +89,11 @@ func (s Print) Accept(v StatementVisitor) {
 }
 
 type Return struct {
+    Return_expr expression.Expr
+}
+
+func (s Return) Accept(v StatementVisitor) {
+    v.VisitReturnStmt(s)
 }
 
 type Var struct {

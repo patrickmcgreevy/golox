@@ -76,6 +76,23 @@ func (p *Parser) statement() (statement.Statement, *ParseError) {
 	return p.expressionStatement()
 }
 
+func (p *Parser) returnStatement() (statement.Statement, *ParseError) {
+    _, err := p.consume(scanner.RETURN, "expected 'return'")
+    if err != nil {
+        return nil, err
+    }
+    expr, err := p.expression()
+    if err != nil {
+        return nil, err
+    }
+    _, err = p.consume(scanner.SEMICOLON, "expected ';'")
+    if err != nil {
+        return nil, err
+    }
+    
+    return statement.Return{Return_expr: expr}, nil
+}
+
 func (p *Parser) forStatement() (statement.Statement, *ParseError) {
 	var initializer_stmt statement.Statement
 	var conditional_expr expression.Expr

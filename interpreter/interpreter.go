@@ -106,6 +106,10 @@ func (v *Interpreter) popEnvironment() {
 }
 
 func (v *Interpreter) Evaluate(e expression.Expr) (any, *RuntimeError) {
+    if e == nil {
+        v.val, v.err = nil, nil
+        return nil, nil
+    }
 	e.Accept(v)
 
 	return v.val, v.err
@@ -403,6 +407,7 @@ func (v *Interpreter) VisitPrintStmt(stmt statement.Print) {
 	fmt.Println(val)
 }
 func (v *Interpreter) VisitReturnStmt(stmt statement.Return) {
+    v.val, v.err = v.Evaluate(stmt.Return_expr)
 }
 
 func (v *Interpreter) VisitVarStmt(stmt statement.Var) {

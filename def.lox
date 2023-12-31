@@ -1,6 +1,7 @@
 var x = 1000;
 fun add(x, y) {
     print x+y;
+    return 3+3;
 }
 fun sub(x, y) {
     print x-y;
@@ -16,3 +17,6 @@ for (var i = 0; i < 10; i = i+1) {
     foo(i);
 }
 
+print add;
+print sub;
+print add(1,1);
