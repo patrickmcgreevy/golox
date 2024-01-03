@@ -73,6 +73,10 @@ func (p *Parser) statement() (statement.Statement, *ParseError) {
 		return p.forStatement()
 	}
 
+    if p.peek().Token_type == scanner.RETURN {
+        return p.returnStatement()
+    }
+
 	return p.expressionStatement()
 }
 

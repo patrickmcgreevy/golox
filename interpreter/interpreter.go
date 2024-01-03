@@ -11,13 +11,14 @@ import (
 )
 
 type LoxCallable interface {
-	Call(interp Interpreter, args []any) any
+	Call(interp Interpreter, args []any) (any, *RuntimeError)
 	Arity() int
 }
 
 type RuntimeError struct {
 	error string
 	tok   scanner.Token
+    return_value any // This is used to return values up the call stack
 }
 
 func (e RuntimeError) Error() string {
@@ -26,6 +27,11 @@ func (e RuntimeError) Error() string {
 
 func (e RuntimeError) GetToken() scanner.Token {
 	return e.tok
+}
+
+// This is used to return a value up the call stack to the 'call' function
+func newReturnError(val any) *RuntimeError {
+    return &RuntimeError{return_value: val}
 }
 
 func newRuntimeError(operator scanner.Token, message string) *RuntimeError {
@@ -266,7 +272,14 @@ func (v *Interpreter) VisitCall(e expression.Call) {
 		return
 	}
 
-	v.val = lox_func.Call(*v, args)
+    val, err := lox_func.Call(*v, args)
+    if err != nil {
+        if err.return_value != nil {
+            val, err = err.return_value, nil
+        }
+    }
+
+    v.val, v.err = val, err
 }
 
 func (v *Interpreter) VisitGrouping(e expression.Grouping) {
@@ -407,7 +420,11 @@ func (v *Interpreter) VisitPrintStmt(stmt statement.Print) {
 	fmt.Println(val)
 }
 func (v *Interpreter) VisitReturnStmt(stmt statement.Return) {
-    v.val, v.err = v.Evaluate(stmt.Return_expr)
+    val, err := v.Evaluate(stmt.Return_expr)
+    if err != nil {
+        err = newReturnError(val)
+        v.val, v.err = val, err
+    }
 }
 
 func (v *Interpreter) VisitVarStmt(stmt statement.Var) {

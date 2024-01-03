@@ -29,7 +29,7 @@ func (c UserCallable) Arity() int {
     return len(c.declaration.Params)
 }
 
-func (c UserCallable) Call(interp Interpreter, args []any) any {
+func (c UserCallable) Call(interp Interpreter, args []any) (any, *RuntimeError) {
    // Create env
    env := NewEnvironment()
    // Map param name to arg values
@@ -39,7 +39,7 @@ func (c UserCallable) Call(interp Interpreter, args []any) any {
    // Evaluate block
    interp.executeBlock(c.declaration.Body, env)
 
-   return interp.val
+   return interp.val, interp.err
 }
 
 func (c UserCallable) String() string {

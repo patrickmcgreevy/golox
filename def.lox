@@ -1,22 +1,9 @@
-var x = 1000;
 fun add(x, y) {
     print x+y;
-    return 3+3;
+    return x+y;
+    print "shouldn't get here!";
 }
 fun sub(x, y) {
-    print x-y;
+    return x-y;
 }
-add(10, sub(4,3));
-fun foo(i) {
-    print "current val: ";
-    print i;
-}
-
-
-for (var i = 0; i < 10; i = i+1) {
-    foo(i);
-}
-
-print add;
-print sub;
-print add(1,1);
+add(1,1);
