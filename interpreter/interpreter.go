@@ -31,7 +31,7 @@ func (e RuntimeError) GetToken() scanner.Token {
 
 // This is used to return a value up the call stack to the 'call' function
 func newReturnError(val any) *RuntimeError {
-    return &RuntimeError{return_value: val}
+    return &RuntimeError{error: "'return' statement outside of function", return_value: val}
 }
 
 func newRuntimeError(operator scanner.Token, message string) *RuntimeError {
@@ -92,6 +92,7 @@ func (v *Interpreter) execute(stmt statement.Statement) *RuntimeError {
 }
 
 func (v *Interpreter) executeBlock(statements []statement.Statement, env Environment) {
+    // I think that by calling pushEnvironment, I blow up the closure
 	v.pushEnvironment(&env)
 	defer v.popEnvironment()
 	for _, stmt := range statements {
@@ -100,6 +101,8 @@ func (v *Interpreter) executeBlock(statements []statement.Statement, env Environ
 }
 
 func (v *Interpreter) pushEnvironment(env *Environment) {
+    // @Issue
+    // I'm pretty sure that this blows up the closure...
 	env.SetEnclosing(v.pEnvironment)
 	v.pEnvironment = env
 }
@@ -383,8 +386,7 @@ func (v *Interpreter) VisitExpressionStmt(stmt statement.Expression) {
 	}
 }
 func (v *Interpreter) VisitFunctionStmt(stmt statement.Function) {
-    var funcDef UserCallable
-    funcDef.declaration = stmt
+    var funcDef UserCallable = UserCallable{declaration: stmt, closure: *v.pEnvironment}
 
     v.pEnvironment.Define(stmt.Name.Lexeme, funcDef)
 }
@@ -421,10 +423,10 @@ func (v *Interpreter) VisitPrintStmt(stmt statement.Print) {
 }
 func (v *Interpreter) VisitReturnStmt(stmt statement.Return) {
     val, err := v.Evaluate(stmt.Return_expr)
-    if err != nil {
+    if err == nil {
         err = newReturnError(val)
-        v.val, v.err = val, err
     }
+    v.val, v.err = val, err
 }
 
 func (v *Interpreter) VisitVarStmt(stmt statement.Var) {

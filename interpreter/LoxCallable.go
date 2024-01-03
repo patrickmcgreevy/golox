@@ -23,6 +23,7 @@ func (c BuiltinCallable) String() string {
 
 type UserCallable struct {
     declaration statement.Function
+    closure Environment
 }
 
 func (c UserCallable) Arity() int {
@@ -32,6 +33,7 @@ func (c UserCallable) Arity() int {
 func (c UserCallable) Call(interp Interpreter, args []any) (any, *RuntimeError) {
    // Create env
    env := NewEnvironment()
+   env.SetEnclosing(&c.closure)
    // Map param name to arg values
    for i, v := range args {
        env.Define(c.declaration.Params[i].Lexeme, v)

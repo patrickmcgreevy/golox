@@ -1,9 +1,44 @@
+fun makeCounter() {
+  var i = 0;
+  fun count() {
+    i = i + 1;
+    print i;
+  }
+
+  return count;
+}
+
+var counter = makeCounter();
+counter(); // "1".
+counter(); // "2".
 fun add(x, y) {
-    print x+y;
     return x+y;
-    print "shouldn't get here!";
 }
 fun sub(x, y) {
     return x-y;
 }
-add(1,1);
+fun a() {
+    return "abc";
+}
+print sub(44, add(1,1));
+print a() + "def";
+
+fun foo() {
+    for (var i = 0; i < 10; i = i +1) {
+        if (i >= 5) {
+            print "slow down there buddy";
+            return false;
+        }
+        print i;
+    }
+}
+foo();
+fun fib(n) {
+      if (n <= 1) return n;
+        return fib(n - 2) + fib(n - 1);
+}
+
+for (var i = 0; i < 20; i = i + 1) {
+      print fib(i);
+}
+

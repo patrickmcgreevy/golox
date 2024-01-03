@@ -85,6 +85,9 @@ func (p *Parser) returnStatement() (statement.Statement, *ParseError) {
     if err != nil {
         return nil, err
     }
+    if p.match(scanner.SEMICOLON) {
+        return statement.Return{Return_expr: nil}, nil
+    }
     expr, err := p.expression()
     if err != nil {
         return nil, err
