@@ -101,9 +101,11 @@ func (v *Interpreter) executeBlock(statements []statement.Statement, env Environ
 }
 
 func (v *Interpreter) pushEnvironment(env *Environment) {
-    // @Issue
-    // I'm pretty sure that this blows up the closure...
-	env.SetEnclosing(v.pEnvironment)
+    // Often, we are passed an env that doesn't have an enclosing scope
+    // in that case, we need to supply one.
+    if env.enclosing == nil {
+        env.SetEnclosing(v.pEnvironment)
+    }
 	v.pEnvironment = env
 }
 
