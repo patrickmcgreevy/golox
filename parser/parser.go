@@ -32,9 +32,9 @@ func (p *Parser) Parse() []statement.Statement {
 	return statements
 }
 
-func (p *Parser) declaration() (statement.Statement, *ParseError) {
+func (p *Parser) declaration() (statement.Statement, error) {
 	var stmt statement.Statement
-	var err *ParseError
+	var err error
 	if p.match(scanner.VAR) {
 		stmt, err = p.varDeclaration()
 	} else if p.match(scanner.FUN) {
@@ -49,7 +49,7 @@ func (p *Parser) declaration() (statement.Statement, *ParseError) {
 	return stmt, nil
 }
 
-func (p *Parser) statement() (statement.Statement, *ParseError) {
+func (p *Parser) statement() (statement.Statement, error) {
 	if p.match(scanner.PRINT) {
 		return p.printStatement()
 	}
@@ -80,7 +80,7 @@ func (p *Parser) statement() (statement.Statement, *ParseError) {
 	return p.expressionStatement()
 }
 
-func (p *Parser) returnStatement() (statement.Statement, *ParseError) {
+func (p *Parser) returnStatement() (statement.Statement, error) {
     _, err := p.consume(scanner.RETURN, "expected 'return'")
     if err != nil {
         return nil, err
@@ -100,7 +100,7 @@ func (p *Parser) returnStatement() (statement.Statement, *ParseError) {
     return statement.Return{Return_expr: expr}, nil
 }
 
-func (p *Parser) forStatement() (statement.Statement, *ParseError) {
+func (p *Parser) forStatement() (statement.Statement, error) {
 	var initializer_stmt statement.Statement
 	var conditional_expr expression.Expr
 	var increment_expression expression.Expr
@@ -171,8 +171,8 @@ func (p *Parser) forStatement() (statement.Statement, *ParseError) {
 
 }
 
-func (p *Parser) whileStatement() (statement.Statement, *ParseError) {
-	var err *ParseError
+func (p *Parser) whileStatement() (statement.Statement, error) {
+	var err error
 	_, err = p.consume(scanner.LEFT_PAREN, "Expected '(' after 'while'.")
 	if err != nil {
 		return nil, err
@@ -196,7 +196,7 @@ func (p *Parser) whileStatement() (statement.Statement, *ParseError) {
 	return statement.NewWhileStmt(conditional_stmt, while_body), nil
 }
 
-func (p *Parser) ifStatement() (statement.Statement, *ParseError) {
+func (p *Parser) ifStatement() (statement.Statement, error) {
 	var else_stmt statement.Statement
 
 	_, err := p.consume(scanner.LEFT_PAREN, "Expected '(' after 'if'.")
@@ -229,7 +229,7 @@ func (p *Parser) ifStatement() (statement.Statement, *ParseError) {
 	return statement.NewIfStatement(expr, if_stmt, else_stmt), nil
 }
 
-func (p *Parser) printStatement() (statement.Statement, *ParseError) {
+func (p *Parser) printStatement() (statement.Statement, error) {
 	var stmt statement.Statement
 	expr, err := p.expression()
 	if err != nil {
@@ -244,7 +244,7 @@ func (p *Parser) printStatement() (statement.Statement, *ParseError) {
 	return statement.NewPrintStmt(expr), nil
 }
 
-func (p *Parser) expressionStatement() (statement.Statement, *ParseError) {
+func (p *Parser) expressionStatement() (statement.Statement, error) {
 	var stmt statement.Statement
 	expr, err := p.expression()
 	if err != nil {
@@ -258,7 +258,7 @@ func (p *Parser) expressionStatement() (statement.Statement, *ParseError) {
 	return statement.NewExpressionStmt(expr), nil
 }
 
-func (p *Parser) block() ([]statement.Statement, *ParseError) {
+func (p *Parser) block() ([]statement.Statement, error) {
 	var statements []statement.Statement
  
     _, err := p.consume(scanner.LEFT_BRACE, "expected '{'")
@@ -281,12 +281,12 @@ func (p *Parser) block() ([]statement.Statement, *ParseError) {
 	return statements, nil
 }
 
-func (p *Parser) funcDeclaration() (statement.Statement, *ParseError) {
+func (p *Parser) funcDeclaration() (statement.Statement, error) {
     // function
     return p.function()
 }
 
-func (p *Parser) function() (statement.Statement, *ParseError) {
+func (p *Parser) function() (statement.Statement, error) {
     var funcId scanner.Token
     var err ParseError
     var identifers []scanner.Token
@@ -322,7 +322,7 @@ func (p *Parser) function() (statement.Statement, *ParseError) {
     return statement.Function{Name: funcId, Params: identifers, Body: block}, nil 
 }
 
-func (p *Parser) identifiers() ([]scanner.Token, *ParseError) {
+func (p *Parser) identifiers() ([]scanner.Token, error) {
     // parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
     var tokens []scanner.Token
     var err ParseError
@@ -344,9 +344,9 @@ func (p *Parser) identifiers() ([]scanner.Token, *ParseError) {
    return tokens, nil 
 }
 
-func (p *Parser) varDeclaration() (statement.Statement, *ParseError) {
+func (p *Parser) varDeclaration() (statement.Statement, error) {
 	var initializer expression.Expr
-	var err *ParseError
+	var err error
 
 	name, err := p.consume(scanner.IDENTIFIER, "Expect variable name.")
 	if err != nil {
@@ -368,11 +368,11 @@ func (p *Parser) varDeclaration() (statement.Statement, *ParseError) {
 	return statement.NewVarStmt(name, initializer), nil
 }
 
-func (p *Parser) expression() (expression.Expr, *ParseError) {
+func (p *Parser) expression() (expression.Expr, error) {
 	return p.assignment()
 }
 
-func (p *Parser) assignment() (expression.Expr, *ParseError) {
+func (p *Parser) assignment() (expression.Expr, error) {
 	left, err := p.logic_or()
 	if err != nil {
 		return nil, err
@@ -395,7 +395,7 @@ func (p *Parser) assignment() (expression.Expr, *ParseError) {
 	return left, nil
 }
 
-func (p *Parser) logic_or() (expression.Expr, *ParseError) {
+func (p *Parser) logic_or() (expression.Expr, error) {
 	left, err := p.logic_and()
 	if err != nil {
 		return nil, err
@@ -414,7 +414,7 @@ func (p *Parser) logic_or() (expression.Expr, *ParseError) {
 	return left, nil
 }
 
-func (p *Parser) logic_and() (expression.Expr, *ParseError) {
+func (p *Parser) logic_and() (expression.Expr, error) {
 	left, err := p.equality()
 	if err != nil {
 		return nil, err
@@ -433,7 +433,7 @@ func (p *Parser) logic_and() (expression.Expr, *ParseError) {
 	return left, nil
 }
 
-func (p *Parser) equality() (expression.Expr, *ParseError) {
+func (p *Parser) equality() (expression.Expr, error) {
 	// First binary expression
 	prefix, err := p.comparison()
 	if err != nil {
@@ -458,7 +458,7 @@ func (p *Parser) equality() (expression.Expr, *ParseError) {
 	return prefix, nil
 }
 
-func (p *Parser) comparison() (expression.Expr, *ParseError) {
+func (p *Parser) comparison() (expression.Expr, error) {
 	prefix, err := p.term()
 	if err != nil {
 		return expression.Unary{}, err
@@ -477,7 +477,7 @@ func (p *Parser) comparison() (expression.Expr, *ParseError) {
 }
 
 // term           → factor ( ( "-" | "+" ) factor )* ;
-func (p *Parser) term() (expression.Expr, *ParseError) {
+func (p *Parser) term() (expression.Expr, error) {
 	prefix, err := p.factor()
 	if err != nil {
 		return expression.Unary{}, err
@@ -496,7 +496,7 @@ func (p *Parser) term() (expression.Expr, *ParseError) {
 }
 
 // factor         → unary ( ( "/" | "*" ) unary )* ;
-func (p *Parser) factor() (expression.Expr, *ParseError) {
+func (p *Parser) factor() (expression.Expr, error) {
 	prefix, err := p.unary()
 	if err != nil {
 		return expression.Unary{}, err
@@ -517,9 +517,9 @@ func (p *Parser) factor() (expression.Expr, *ParseError) {
 // unary          → ( "!" | "-" ) unary
 //
 //	| primary ;
-func (p *Parser) unary() (expression.Expr, *ParseError) {
+func (p *Parser) unary() (expression.Expr, error) {
 	var right expression.Expr
-	var err *ParseError
+	var err error
 
 	// prefix := p.advance()
 	if p.match(scanner.BANG, scanner.MINUS) {
@@ -540,9 +540,9 @@ func (p *Parser) unary() (expression.Expr, *ParseError) {
 	return primary, nil
 }
 
-func (p *Parser) call() (expression.Expr, *ParseError) {
+func (p *Parser) call() (expression.Expr, error) {
 	var expr expression.Expr
-	var err *ParseError
+	var err error
 
 	expr, err = p.primary()
 	if err != nil {
@@ -559,7 +559,7 @@ func (p *Parser) call() (expression.Expr, *ParseError) {
 	return expr, nil
 }
 
-func (p *Parser) add_args(expr expression.Expr) (expression.Expr, *ParseError) {
+func (p *Parser) add_args(expr expression.Expr) (expression.Expr, error) {
 	paren := p.previous()
 	if p.match(scanner.RIGHT_PAREN) {
 		return expression.NewCall(expr, paren, nil), nil
@@ -578,9 +578,9 @@ func (p *Parser) add_args(expr expression.Expr) (expression.Expr, *ParseError) {
 	return expression.NewCall(expr, paren, args), nil // call expr with args, nil
 }
 
-func (p *Parser) arguments() ([]expression.Expr, *ParseError) {
+func (p *Parser) arguments() ([]expression.Expr, error) {
 	var args []expression.Expr
-	var err *ParseError
+	var err error
 	for cur_arg, err := p.expression(); err == nil; cur_arg, err = p.expression() {
 		if len(args) >= 255 {
 			p.error(p.peek(), "Can't have more than 255 argumens.")
@@ -596,8 +596,8 @@ func (p *Parser) arguments() ([]expression.Expr, *ParseError) {
 // primary        → NUMBER | STRING | "true" | "false" | "nil" | IDENTIFIER | (expression)
 //
 //	| "(" expression ")"
-func (p *Parser) primary() (expression.Expr, *ParseError) {
-	var err *ParseError
+func (p *Parser) primary() (expression.Expr, error) {
+	var err error
 	var expr expression.Expr
 	if p.match(scanner.FALSE) {
 		return expression.Literal{Value: false}, nil
@@ -628,7 +628,7 @@ func (p *Parser) primary() (expression.Expr, *ParseError) {
 	return expression.Unary{}, &parse_error
 }
 
-// func (p *Parser) identifier() (expression.Expr, *ParseError)
+// func (p *Parser) identifier() (expression.Expr, error)
 
 func (p *Parser) syncronize() {
 	p.advance()
@@ -675,7 +675,7 @@ func (p *Parser) advance() scanner.Token {
 	return ret
 }
 
-func (p *Parser) consume(tokenType scanner.TokenType, message string) (scanner.Token, *ParseError) {
+func (p *Parser) consume(tokenType scanner.TokenType, message string) (scanner.Token, error) {
 	if p.check(tokenType) {
 		return p.advance(), nil
 	}

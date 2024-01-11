@@ -176,28 +176,6 @@ func (s *Scanner) tokenize_number() {
 	}
 
 	s.addTokenLiteral(NUMBER, num)
-
-	// var decimal bool = false
-	// var c rune
-	//
-	// for c = s.peek(); !s.isAtEnd(); c = s.peek() {
-	// 	if unicode.IsDigit(c) {
-	// 		s.advance()
-	// 	} else if c == '.' {
-	// 		if decimal {
-	// 			errorhandling.Report(s.line, s.source[s.start:s.current+1], "Unexpected character.")
-	// 			return
-	// 		}
-	// 		decimal = true
-	//            s.advance()
-	// 	} else {
-	//            break
-	// 	}
-	// }
-	//
-	// new_string = s.source[s.start:s.current]
-	//
-	// s.addTokenLiteral(NUMBER, &new_string)
 }
 
 func (s *Scanner) tokenize_string() {
