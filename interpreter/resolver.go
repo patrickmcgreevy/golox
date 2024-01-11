@@ -2,25 +2,38 @@ package interpreter
 
 import "golox/expression"
 import "golox/statement"
+import "golox/scanner"
+
+type scope = map[string]bool
 
 type resolver struct {
 	interp Interpreter
+    scopes []scope
 }
 
 
-// type ASTVisitor interface {
-//     expression.Visitor
-//     statement.StatementVisitor
-// }
-//
-// type accepter interface {
-//     Accept(ASTVisitor)
-// }
-
 func (r *resolver) beginScope() {
+    r.scopes = append(r.scopes, make(scope))
 }
 
 func (r *resolver) endScope() {
+    r.scopes = r.scopes[len(r.scopes)-1:]
+}
+
+func (r *resolver) declare(name scanner.Token) {
+    if len(r.scopes) == 0 {
+        return
+    }
+
+    r.scopes[len(r.scopes)-1][name.Lexeme] = false
+}
+
+func (r *resolver) define(name scanner.Token) {
+    if len(r.scopes) == 0 {
+        return
+    }
+
+    r.scopes[len(r.scopes)-1][name.Lexeme] = true
 }
 
 func (r *resolver) resolve_statements(statements []statement.Statement) {
@@ -71,5 +84,12 @@ func (r *resolver) VisitPrintStmt(stmt statement.Print) {
 func (r *resolver) VisitReturnStmt(stmt statement.Return) {
 }
 func (r *resolver) VisitVarStmt(stmt statement.Var) {
+    r.declare(stmt.Name)
+    if stmt.Initializer != nil {
+        r.resolve_expression(stmt.Initializer)
+    }
+
+    r.define(stmt.Name)
 }
-func (r *resolver) VisitWhileStmt(stmt statement.While)
+func (r *resolver) VisitWhileStmt(stmt statement.While) {
+}
