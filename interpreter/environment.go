@@ -47,8 +47,23 @@ func (e *Environment) Assign(name string, value any) error {
 	return nil
 }
 
+func (e *Environment) AssignAt(dist int, name string, value any) error {
+    var env *Environment
+    var i int 
+
+    for i, env = 0, e; i<=dist && env != nil; i, env = i+1, env.GetEnclosing() {
+        if i != dist {
+            continue
+        }
+
+        env.Assign(name, value)
+        return nil
+    }
+
+    return newUndefinedVariableError(name)
+}
+
 func (e Environment) Get(name scanner.Token) (any, error) {
-	var err undefinedVariableError
 	val, ok := e.values[name.Lexeme]
 	if ok {
 		return val, nil
@@ -56,8 +71,22 @@ func (e Environment) Get(name scanner.Token) (any, error) {
 	if e.enclosing != nil {
 		return e.enclosing.Get(name)
 	}
-	err = newUndefinedVariableError(name.Lexeme)
-	return nil, err
+	return nil, newUndefinedVariableError(name.Lexeme) 
+}
+
+func (e Environment) GetAt(dist int, name scanner.Token) (any, error) {
+    var env *Environment
+    var i int
+
+    for i, env = 0, &e; i <= dist && env != nil; i, env = i+1, env.GetEnclosing() {
+        if i != dist {
+            continue
+        }
+
+        return env.Get(name)
+    }
+
+    return nil, newUndefinedVariableError(name.Lexeme)
 }
 
 func (e Environment) GetEnclosing() *Environment {

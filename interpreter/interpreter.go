@@ -53,15 +53,18 @@ type Interpreter struct {
 	err             *RuntimeError
 	pEnvironment    *Environment
 	interactiveMode bool
+    locals map[expression.Expr]int
+    globals Environment
 }
 
 func NewInterpreter() Interpreter {
-	env := NewEnvironment()
+    globals := NewEnvironment()
+	env := globals
 
-	env.Define("clock", BuiltinCallable{params: make([]string, 0), foo: func(a Interpreter, b []any) any {
+	globals.Define("clock", BuiltinCallable{params: make([]string, 0), foo: func(a Interpreter, b []any) any {
 		return float64(time.Now().UnixMilli())/1000
 	}})
-	return Interpreter{val: nil, err: nil, pEnvironment: &env, interactiveMode: false}
+	return Interpreter{val: nil, err: nil, pEnvironment: &env, interactiveMode: false, locals: make(map[expression.Expr]int), globals: globals}
 }
 
 func (v *Interpreter) Interpret(statements []statement.Statement) {
@@ -82,6 +85,11 @@ func (v *Interpreter) EnableInteractiveMode() {
 func (v *Interpreter) DisableInteractiveMode() {
 	v.interactiveMode = false
 }
+
+func (v *Interpreter) resolve(e expression.Expr, depth int) {
+    v.locals[e] = depth
+}
+
 
 func (v *Interpreter) execute(stmt statement.Statement) *RuntimeError {
 	stmt.Accept(v)
@@ -149,7 +157,13 @@ func (v *Interpreter) VisitAssign(e expression.Assign) {
 		v.err = err
 		return
 	}
-	assignment_error := v.pEnvironment.Assign(e.Name.Lexeme, right)
+    val, ok := v.locals[e]
+    if !ok {
+        // v.err = newRuntimeError(e.Name, "undefined variable")
+        // return
+        v.globals.Assign(e.Name.Lexeme, right)
+    }
+	assignment_error := v.pEnvironment.AssignAt(val, e.Name.Lexeme, right)
 	if assignment_error != nil {
 		err = newRuntimeError(e.Name, assignment_error.Error())
 		v.err = err
@@ -364,13 +378,22 @@ func (v *Interpreter) VisitUnary(e expression.Unary) {
 }
 
 func (v *Interpreter) VisitVariable(e expression.Variable) {
-	val, err := v.pEnvironment.Get(e.GetToken())
+	val, err := v.lookUpVariable(e.GetToken(), e)
 	if err != nil {
 		v.err = newRuntimeError(e.GetToken(), err.Error())
 		return
 	}
 
 	v.val = val
+}
+
+func (v *Interpreter) lookUpVariable(name scanner.Token, expr expression.Expr) (any, error) {
+    distance, ok := v.locals[expr]
+    if ok {
+        return v.pEnvironment.GetAt(distance, name)
+    } else {
+        return v.globals.Get(name)
+    }
 }
 
 func (v *Interpreter) VisitBlockStmt(stmt statement.Block) {

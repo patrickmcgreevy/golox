@@ -71,6 +71,12 @@ func run(source string) {
 	if statements == nil {
 		return
 	}
+    resolver := interpreter.Resolver{Interp: &interp}
+    err := resolver.Resolve(statements)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
 
 	interp.Interpret(statements)
 }
