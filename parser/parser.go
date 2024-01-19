@@ -39,6 +39,8 @@ func (p *Parser) declaration() (statement.Statement, error) {
 		stmt, err = p.varDeclaration()
 	} else if p.match(scanner.FUN) {
         stmt, err = p.funcDeclaration()
+    } else if p.match(scanner.CLASS) {
+        stmt, err = p.classDeclaration()
     } else {
 		stmt, err = p.statement()
 	}
@@ -281,6 +283,43 @@ func (p *Parser) block() ([]statement.Statement, error) {
 	return statements, nil
 }
 
+func (p *Parser) classDeclaration() (statement.Statement, error) {
+    var classId scanner.Token
+    var err error
+    var funcs []statement.Function
+
+    classId, err = p.consume(scanner.IDENTIFIER, "expected an identifier")
+    if err != nil {
+        return nil, err
+    }
+
+    _, err = p.consume(scanner.LEFT_PAREN, "expected '{'")
+    if err != nil {
+        return nil, err
+    }
+
+    if p.match(scanner.RIGHT_PAREN) {
+        return nil, nil // return class here
+    }
+
+    for ;; {
+        if p.match(scanner.RIGHT_PAREN) {
+            break
+        }
+        val, err := p.funcDeclaration()
+        if err != nil {
+            return nil, err
+        }
+        fun, ok := val.(statement.Function)
+        if !ok {
+            return nil,NewParseError("expected a function definition") 
+        }
+        funcs = append(funcs, fun)
+    }
+
+    return nil, nil // return class here
+}
+
 func (p *Parser) funcDeclaration() (statement.Statement, error) {
     // function
     return p.function()
@@ -292,7 +331,7 @@ func (p *Parser) function() (statement.Statement, error) {
     var identifers []scanner.Token
 
     if !p.match(scanner.IDENTIFIER) {
-        err = NewParseError("expected an identifer.")
+        err = NewParseError("expected an identifer")
         return nil, &err
     }
     funcId = p.previous()
@@ -709,7 +748,7 @@ type ParseError struct {
 	error string
 }
 
-func (e *ParseError) Error() string {
+func (e ParseError) Error() string {
 	return e.error
 }
 
