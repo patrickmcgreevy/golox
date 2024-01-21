@@ -38,6 +38,12 @@ func (s Block) GetStatements() []Statement {
 }
 
 type Class struct {
+    Name scanner.Token
+    Methods []Function
+}
+
+func (s Class) Accept(v StatementVisitor) {
+    v.VisitClassStmt(s)
 }
 
 type Expression struct {

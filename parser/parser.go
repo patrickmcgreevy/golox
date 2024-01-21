@@ -38,10 +38,10 @@ func (p *Parser) declaration() (statement.Statement, error) {
 	if p.match(scanner.VAR) {
 		stmt, err = p.varDeclaration()
 	} else if p.match(scanner.FUN) {
-        stmt, err = p.funcDeclaration()
-    } else if p.match(scanner.CLASS) {
-        stmt, err = p.classDeclaration()
-    } else {
+		stmt, err = p.funcDeclaration()
+	} else if p.match(scanner.CLASS) {
+		stmt, err = p.classDeclaration()
+	} else {
 		stmt, err = p.statement()
 	}
 	if err != nil {
@@ -75,31 +75,31 @@ func (p *Parser) statement() (statement.Statement, error) {
 		return p.forStatement()
 	}
 
-    if p.peek().Token_type == scanner.RETURN {
-        return p.returnStatement()
-    }
+	if p.peek().Token_type == scanner.RETURN {
+		return p.returnStatement()
+	}
 
 	return p.expressionStatement()
 }
 
 func (p *Parser) returnStatement() (statement.Statement, error) {
-    _, err := p.consume(scanner.RETURN, "expected 'return'")
-    if err != nil {
-        return nil, err
-    }
-    if p.match(scanner.SEMICOLON) {
-        return statement.Return{Return_expr: nil}, nil
-    }
-    expr, err := p.expression()
-    if err != nil {
-        return nil, err
-    }
-    _, err = p.consume(scanner.SEMICOLON, "expected ';'")
-    if err != nil {
-        return nil, err
-    }
-    
-    return statement.Return{Return_expr: expr}, nil
+	_, err := p.consume(scanner.RETURN, "expected 'return'")
+	if err != nil {
+		return nil, err
+	}
+	if p.match(scanner.SEMICOLON) {
+		return statement.Return{Return_expr: nil}, nil
+	}
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.consume(scanner.SEMICOLON, "expected ';'")
+	if err != nil {
+		return nil, err
+	}
+
+	return statement.Return{Return_expr: expr}, nil
 }
 
 func (p *Parser) forStatement() (statement.Statement, error) {
@@ -262,11 +262,11 @@ func (p *Parser) expressionStatement() (statement.Statement, error) {
 
 func (p *Parser) block() ([]statement.Statement, error) {
 	var statements []statement.Statement
- 
-    _, err := p.consume(scanner.LEFT_BRACE, "expected '{'")
-    if err != nil {
-        return nil, err
-    }
+
+	_, err := p.consume(scanner.LEFT_BRACE, "expected '{'")
+	if err != nil {
+		return nil, err
+	}
 
 	for !p.check(scanner.RIGHT_BRACE) && !p.IsAtEnd() {
 		stmt, err := p.declaration()
@@ -284,103 +284,100 @@ func (p *Parser) block() ([]statement.Statement, error) {
 }
 
 func (p *Parser) classDeclaration() (statement.Statement, error) {
-    var classId scanner.Token
-    var err error
-    var funcs []statement.Function
+	var classId scanner.Token
+	var err error
+	var funcs []statement.Function
 
-    classId, err = p.consume(scanner.IDENTIFIER, "expected an identifier")
-    if err != nil {
-        return nil, err
-    }
+	classId, err = p.consume(scanner.IDENTIFIER, "expected an identifier")
+	if err != nil {
+		return nil, err
+	}
 
-    _, err = p.consume(scanner.LEFT_PAREN, "expected '{'")
-    if err != nil {
-        return nil, err
-    }
+	_, err = p.consume(scanner.LEFT_BRACE, "expected '{'")
+	if err != nil {
+		return nil, err
+	}
 
-    if p.match(scanner.RIGHT_PAREN) {
-        return nil, nil // return class here
-    }
+	if p.match(scanner.RIGHT_BRACE) {
+		return statement.Class{Name: classId}, nil // return class here
+	}
 
-    for ;; {
-        if p.match(scanner.RIGHT_PAREN) {
-            break
-        }
-        val, err := p.funcDeclaration()
-        if err != nil {
-            return nil, err
-        }
-        fun, ok := val.(statement.Function)
-        if !ok {
-            return nil,NewParseError("expected a function definition") 
-        }
-        funcs = append(funcs, fun)
-    }
+	for !p.match(scanner.RIGHT_BRACE) && !p.IsAtEnd() {
+		val, err := p.funcDeclaration()
+		if err != nil {
+			return nil, err
+		}
+		fun, ok := val.(statement.Function)
+		if !ok {
+			return nil, NewParseError("expected a function definition")
+		}
+		funcs = append(funcs, fun)
+	}
 
-    return nil, nil // return class here
+	return statement.Class{Name: classId, Methods: funcs}, nil // return class here
 }
 
 func (p *Parser) funcDeclaration() (statement.Statement, error) {
-    // function
-    return p.function()
+	// function
+	return p.function()
 }
 
 func (p *Parser) function() (statement.Statement, error) {
-    var funcId scanner.Token
-    var err ParseError
-    var identifers []scanner.Token
+	var funcId scanner.Token
+	var err ParseError
+	var identifers []scanner.Token
 
-    if !p.match(scanner.IDENTIFIER) {
-        err = NewParseError("expected an identifer")
-        return nil, &err
-    }
-    funcId = p.previous()
+	if !p.match(scanner.IDENTIFIER) {
+		err = NewParseError("expected an identifer")
+		return nil, &err
+	}
+	funcId = p.previous()
 
-    _, pErr := p.consume(scanner.LEFT_PAREN, "expected '('.")
-    if pErr != nil {
-        return nil, pErr
-    }
+	_, pErr := p.consume(scanner.LEFT_PAREN, "expected '('.")
+	if pErr != nil {
+		return nil, pErr
+	}
 
-    if p.peek().Token_type != scanner.RIGHT_PAREN {
-        identifers, pErr = p.identifiers()
-        if pErr != nil {
-            return nil, pErr
-        }
-    }
+	if p.peek().Token_type != scanner.RIGHT_PAREN {
+		identifers, pErr = p.identifiers()
+		if pErr != nil {
+			return nil, pErr
+		}
+	}
 
-    _, pErr = p.consume(scanner.RIGHT_PAREN, "expected ')'.")
-    if pErr != nil {
-        return nil, pErr
-    }
-    
-    block, pErr := p.block()
-    if pErr != nil {
-        return nil, pErr
-    }
+	_, pErr = p.consume(scanner.RIGHT_PAREN, "expected ')'.")
+	if pErr != nil {
+		return nil, pErr
+	}
 
-    return statement.Function{Name: funcId, Params: identifers, Body: block}, nil 
+	block, pErr := p.block()
+	if pErr != nil {
+		return nil, pErr
+	}
+
+	return statement.Function{Name: funcId, Params: identifers, Body: block}, nil
 }
 
 func (p *Parser) identifiers() ([]scanner.Token, error) {
-    // parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
-    var tokens []scanner.Token
-    var err ParseError
+	// parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
+	var tokens []scanner.Token
+	var err ParseError
 
-    if !p.match(scanner.IDENTIFIER) {
-        err = NewParseError("expected an idenifier.")
-        return nil, &err
-    }
-    tokens = append(tokens, p.previous())
+	if !p.match(scanner.IDENTIFIER) {
+		err = NewParseError("expected an idenifier.")
+		return nil, &err
+	}
+	tokens = append(tokens, p.previous())
 
-    if p.match(scanner.COMMA) {
-        val, pErr := p.identifiers()
-        if pErr != nil {
-            return nil, pErr
-        }
-        return append(tokens,  val...), nil
-    }
+	if p.match(scanner.COMMA) {
+		val, pErr := p.identifiers()
+		if pErr != nil {
+			return nil, pErr
+		}
+		return append(tokens, val...), nil
+	}
 
-   return tokens, nil 
+	return tokens, nil
 }
 
 func (p *Parser) varDeclaration() (statement.Statement, error) {
@@ -413,15 +410,25 @@ func (p *Parser) expression() (expression.Expr, error) {
 
 func (p *Parser) assignment() (expression.Expr, error) {
 	left, err := p.logic_or()
-	if err != nil {
-		return nil, err
-	}
+    if err != nil {
+        return nil, err
+    }
 
 	if p.match(scanner.EQUAL) {
 		right, err := p.assignment()
 		if err != nil {
 			return nil, err
 		}
+
+        switch t := left.(type) {
+        case expression.Variable:
+            return expression.Assign{Name: t.GetToken(), Value: right}, nil
+        case expression.Get:
+            return expression.Set{Object: t.Object, Name: t.Name, Value: right}, nil // Set expression
+        default:
+			err := NewParseError("Left side of assignment must be a variable.")
+			return nil, &err
+        }
 
 		val, ok := left.(expression.Variable)
 		if !ok {
@@ -588,11 +595,21 @@ func (p *Parser) call() (expression.Expr, error) {
 		return nil, err
 	}
 
-	for p.match(scanner.LEFT_PAREN) {
-		expr, err = p.add_args(expr)
-		if err != nil {
-			return nil, err
-		}
+	for ;; {
+        if p.match(scanner.LEFT_PAREN) {
+            expr, err = p.add_args(expr)
+            if err != nil {
+                return nil, err
+            }
+        } else if p.match(scanner.DOT) {
+            name, err := p.consume(scanner.IDENTIFIER, "expected an identifier afer \".\"")
+            if err != nil {
+                return nil, err
+            }
+            expr = expression.Get{Object: expr, Name: name}
+        } else {
+            break
+        }
 	}
 
 	return expr, nil

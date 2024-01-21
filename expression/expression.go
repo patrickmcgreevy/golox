@@ -58,6 +58,19 @@ func (e Call) Accept(v Visitor) {
 	v.VisitCall(e)
 }
 
+type Get struct {
+	Object Expr
+	Name   scanner.Token
+}
+
+func (e Get) Accept(v Visitor) {
+	v.VisitGet(e)
+}
+
+func (e Get) Expand_to_string() string {
+	return e.Object.Expand_to_string() + "." + e.Name.Lexeme
+}
+
 type Grouping struct {
 	Expr Expr
 }
@@ -105,6 +118,24 @@ type Unary struct {
 
 func (e Unary) Accept(v Visitor) {
 	v.VisitUnary(e)
+}
+
+type Set struct {
+	Object Expr
+	Name   scanner.Token
+	Value  Expr
+}
+
+func (e Set) Expand_to_string() string {
+	return fmt.Sprintf("%s.%s = %s",
+		e.Object.Expand_to_string(),
+		e.Name.Lexeme,
+		e.Value.Expand_to_string(),
+	)
+}
+
+func (e Set) Accept(v Visitor) {
+	v.VisitSet(e)
 }
 
 type Variable struct {
@@ -194,9 +225,11 @@ type Visitor interface {
 	VisitAssign(e Assign)
 	VisitBinary(e Binary)
 	VisitCall(e Call)
+	VisitGet(e Get)
 	VisitGrouping(e Grouping)
 	VisitLiteral(e Literal)
 	VisitLogical(e Logical)
+	VisitSet(e Set)
 	VisitUnary(e Unary)
 	VisitVariable(e Variable)
 }
@@ -238,6 +271,12 @@ func (v *ExpressionStringVisitor) VisitCall(e Call) {
 	v.parenthesize("arguments", e.Args...)
 }
 
+func (v *ExpressionStringVisitor) VisitGet(e Get) {
+	e.Object.Accept(v)
+	v.expr_string_builder.WriteString(".")
+	v.expr_string_builder.WriteString(e.Name.Lexeme)
+}
+
 func (v *ExpressionStringVisitor) VisitGrouping(e Grouping) {
 	v.parenthesize("grouping", e.Expr)
 }
@@ -267,6 +306,14 @@ func (v *ExpressionStringVisitor) VisitLogical(e Logical) {
 	e.Left.Accept(v)
 	v.expr_string_builder.WriteString(e.Operator.Lexeme)
 	e.Right.Accept(v)
+}
+
+func (v *ExpressionStringVisitor) VisitSet(e Set) {
+    e.Object.Accept(v)
+    v.expr_string_builder.WriteString(".")
+    v.expr_string_builder.WriteString(e.Name.Lexeme)
+    v.expr_string_builder.WriteString(" = ")
+    e.Value.Accept(v)
 }
 
 func (v *ExpressionStringVisitor) VisitUnary(e Unary) {

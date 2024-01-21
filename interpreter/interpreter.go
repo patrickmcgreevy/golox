@@ -16,9 +16,9 @@ type LoxCallable interface {
 }
 
 type RuntimeError struct {
-	error string
-	tok   scanner.Token
-    return_value any // This is used to return values up the call stack
+	error        string
+	tok          scanner.Token
+	return_value any // This is used to return values up the call stack
 }
 
 func (e RuntimeError) Error() string {
@@ -31,7 +31,7 @@ func (e RuntimeError) GetToken() scanner.Token {
 
 // This is used to return a value up the call stack to the 'call' function
 func newReturnError(val any) *RuntimeError {
-    return &RuntimeError{error: "'return' statement outside of function", return_value: val}
+	return &RuntimeError{error: "'return' statement outside of function", return_value: val}
 }
 
 func newRuntimeError(operator scanner.Token, message string) *RuntimeError {
@@ -53,16 +53,16 @@ type Interpreter struct {
 	err             *RuntimeError
 	pEnvironment    *Environment
 	interactiveMode bool
-    locals map[expression.Expr]int
-    globals Environment
+	locals          map[expression.Expr]int
+	globals         Environment
 }
 
 func NewInterpreter() Interpreter {
-    globals := NewEnvironment()
+	globals := NewEnvironment()
 	env := globals
 
 	globals.Define("clock", BuiltinCallable{params: make([]string, 0), foo: func(a Interpreter, b []any) any {
-		return float64(time.Now().UnixMilli())/1000
+		return float64(time.Now().UnixMilli()) / 1000
 	}})
 	return Interpreter{val: nil, err: nil, pEnvironment: &env, interactiveMode: false, locals: make(map[expression.Expr]int), globals: globals}
 }
@@ -87,9 +87,8 @@ func (v *Interpreter) DisableInteractiveMode() {
 }
 
 func (v *Interpreter) resolve(e expression.Expr, depth int) {
-    v.locals[e] = depth
+	v.locals[e] = depth
 }
-
 
 func (v *Interpreter) execute(stmt statement.Statement) *RuntimeError {
 	stmt.Accept(v)
@@ -100,7 +99,7 @@ func (v *Interpreter) execute(stmt statement.Statement) *RuntimeError {
 }
 
 func (v *Interpreter) executeBlock(statements []statement.Statement, env Environment) {
-    // I think that by calling pushEnvironment, I blow up the closure
+	// I think that by calling pushEnvironment, I blow up the closure
 	v.pushEnvironment(&env)
 	defer v.popEnvironment()
 	for _, stmt := range statements {
@@ -109,11 +108,11 @@ func (v *Interpreter) executeBlock(statements []statement.Statement, env Environ
 }
 
 func (v *Interpreter) pushEnvironment(env *Environment) {
-    // Often, we are passed an env that doesn't have an enclosing scope
-    // in that case, we need to supply one.
-    if env.enclosing == nil {
-        env.SetEnclosing(v.pEnvironment)
-    }
+	// Often, we are passed an env that doesn't have an enclosing scope
+	// in that case, we need to supply one.
+	if env.enclosing == nil {
+		env.SetEnclosing(v.pEnvironment)
+	}
 	v.pEnvironment = env
 }
 
@@ -125,10 +124,10 @@ func (v *Interpreter) popEnvironment() {
 }
 
 func (v *Interpreter) Evaluate(e expression.Expr) (any, *RuntimeError) {
-    if e == nil {
-        v.val, v.err = nil, nil
-        return nil, nil
-    }
+	if e == nil {
+		v.val, v.err = nil, nil
+		return nil, nil
+	}
 	e.Accept(v)
 
 	return v.val, v.err
@@ -157,12 +156,12 @@ func (v *Interpreter) VisitAssign(e expression.Assign) {
 		v.err = err
 		return
 	}
-    val, ok := v.locals[e]
-    if !ok {
-        // v.err = newRuntimeError(e.Name, "undefined variable")
-        // return
-        v.globals.Assign(e.Name.Lexeme, right)
-    }
+	val, ok := v.locals[e]
+	if !ok {
+		// v.err = newRuntimeError(e.Name, "undefined variable")
+		// return
+		v.globals.Assign(e.Name.Lexeme, right)
+	}
 	assignment_error := v.pEnvironment.AssignAt(val, e.Name.Lexeme, right)
 	if assignment_error != nil {
 		err = newRuntimeError(e.Name, assignment_error.Error())
@@ -287,18 +286,40 @@ func (v *Interpreter) VisitCall(e expression.Call) {
 	}
 
 	if len(args) != lox_func.Arity() {
-		v.err = newRuntimeError(e.Paren, fmt.Sprint("Expected", lox_func.Arity(), "arguments but got", len(args)))
+		v.err = newRuntimeError(e.Paren, fmt.Sprint("Expected ", lox_func.Arity(), " arguments but got ", len(args)))
 		return
 	}
 
-    val, err := lox_func.Call(*v, args)
-    if err != nil {
-        if err.return_value != nil {
-            val, err = err.return_value, nil
-        }
-    }
+	val, err := lox_func.Call(*v, args)
+	if err != nil {
+		if err.return_value != nil {
+			val, err = err.return_value, nil
+		}
+	}
 
-    v.val, v.err = val, err
+	v.val, v.err = val, err
+}
+
+func (v *Interpreter) VisitGet(e expression.Get) {
+	val, err := v.Evaluate(e.Object)
+	if err != nil {
+		v.err = err
+		return
+	}
+
+	obj, ok := val.(LoxInstance)
+	if !ok {
+		v.err = &RuntimeError{error: "only class instances have properties", tok: e.Name}
+		return
+	}
+
+	ret, err := obj.Get(e.Name)
+	if err != nil {
+		v.err = err
+		return
+	}
+
+	v.val = ret
 }
 
 func (v *Interpreter) VisitGrouping(e expression.Grouping) {
@@ -358,6 +379,27 @@ func (v *Interpreter) VisitLogical(e expression.Logical) {
 	}
 }
 
+func (v *Interpreter) VisitSet(e expression.Set) {
+	obj, err := v.Evaluate(e.Object)
+	if err != nil {
+		v.err = err
+		return
+	}
+	instance, ok := obj.(LoxInstance)
+	if !ok {
+		v.err = &RuntimeError{error: "only instances have fields", tok: e.Name}
+		return
+	}
+	val, err := v.Evaluate(e.Value)
+	if err != nil {
+		v.err = err
+		return
+	}
+	instance.Fields[e.Name.Lexeme] = val
+
+	v.val = val
+}
+
 func (v *Interpreter) VisitUnary(e expression.Unary) {
 	right, err := v.Evaluate(e.Right)
 	if err != nil {
@@ -388,12 +430,12 @@ func (v *Interpreter) VisitVariable(e expression.Variable) {
 }
 
 func (v *Interpreter) lookUpVariable(name scanner.Token, expr expression.Expr) (any, error) {
-    distance, ok := v.locals[expr]
-    if ok {
-        return v.pEnvironment.GetAt(distance, name)
-    } else {
-        return v.globals.Get(name)
-    }
+	distance, ok := v.locals[expr]
+	if ok {
+		return v.pEnvironment.GetAt(distance, name)
+	} else {
+		return v.globals.Get(name)
+	}
 }
 
 func (v *Interpreter) VisitBlockStmt(stmt statement.Block) {
@@ -403,6 +445,15 @@ func (v *Interpreter) VisitBlockStmt(stmt statement.Block) {
 	v.executeBlock(stmt.GetStatements(), env)
 }
 func (v *Interpreter) VisitClassStmt(stmt statement.Class) {
+    methods := make(map[string]LoxCallable)
+
+	v.pEnvironment.Define(stmt.Name.Lexeme, nil)
+    for _, m := range stmt.Methods {
+        methods[m.Name.Lexeme] = UserCallable{declaration: m, closure: *v.pEnvironment}
+    }
+    class := LoxClass{Name: stmt.Name.Lexeme, Methods: methods}
+	v.pEnvironment.Assign(stmt.Name.Lexeme, class)
+    
 }
 func (v *Interpreter) VisitExpressionStmt(stmt statement.Expression) {
 	val, err := v.Evaluate(stmt.Val)
@@ -411,9 +462,9 @@ func (v *Interpreter) VisitExpressionStmt(stmt statement.Expression) {
 	}
 }
 func (v *Interpreter) VisitFunctionStmt(stmt statement.Function) {
-    var funcDef UserCallable = UserCallable{declaration: stmt, closure: *v.pEnvironment}
+	var funcDef UserCallable = UserCallable{declaration: stmt, closure: *v.pEnvironment}
 
-    v.pEnvironment.Define(stmt.Name.Lexeme, funcDef)
+	v.pEnvironment.Define(stmt.Name.Lexeme, funcDef)
 }
 func (v *Interpreter) VisitIfStmt(stmt statement.If) {
 	val, err := v.Evaluate(stmt.Conditional)
@@ -447,11 +498,11 @@ func (v *Interpreter) VisitPrintStmt(stmt statement.Print) {
 	fmt.Println(val)
 }
 func (v *Interpreter) VisitReturnStmt(stmt statement.Return) {
-    val, err := v.Evaluate(stmt.Return_expr)
-    if err == nil {
-        err = newReturnError(val)
-    }
-    v.val, v.err = val, err
+	val, err := v.Evaluate(stmt.Return_expr)
+	if err == nil {
+		err = newReturnError(val)
+	}
+	v.val, v.err = val, err
 }
 
 func (v *Interpreter) VisitVarStmt(stmt statement.Var) {
