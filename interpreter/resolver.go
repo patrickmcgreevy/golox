@@ -163,6 +163,10 @@ func (r *Resolver) VisitLogical(e expression.Logical) {
 	r.err = r.resolve_expression(e.Right)
 }
 
+func (r *Resolver) VisitThis(e expression.This) {
+    r.resolveLocal(e, e.Keyword)
+}
+
 func (r *Resolver) VisitSet(e expression.Set) {
     r.resolve_expression(e.Object)
     r.resolve_expression(e.Value)

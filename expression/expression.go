@@ -138,6 +138,18 @@ func (e Set) Accept(v Visitor) {
 	v.VisitSet(e)
 }
 
+type This struct {
+    Keyword scanner.Token
+}
+
+func (e This) Accept(v Visitor) {
+    v.VisitThis(e)
+}
+
+func (e This) Expand_to_string() string {
+    return "this"
+}
+
 type Variable struct {
 	name scanner.Token
 }
@@ -230,6 +242,7 @@ type Visitor interface {
 	VisitLiteral(e Literal)
 	VisitLogical(e Logical)
 	VisitSet(e Set)
+    VisitThis(e This)
 	VisitUnary(e Unary)
 	VisitVariable(e Variable)
 }
@@ -306,6 +319,10 @@ func (v *ExpressionStringVisitor) VisitLogical(e Logical) {
 	e.Left.Accept(v)
 	v.expr_string_builder.WriteString(e.Operator.Lexeme)
 	e.Right.Accept(v)
+}
+
+func (v *ExpressionStringVisitor) VisitThis(e This) {
+    v.expr_string_builder.WriteString("this")
 }
 
 func (v *ExpressionStringVisitor) VisitSet(e Set) {

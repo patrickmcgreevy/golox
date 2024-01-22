@@ -379,6 +379,9 @@ func (v *Interpreter) VisitLogical(e expression.Logical) {
 	}
 }
 
+func (v *Interpreter) VisitThis(e expression.This) {
+}
+
 func (v *Interpreter) VisitSet(e expression.Set) {
 	obj, err := v.Evaluate(e.Object)
 	if err != nil {

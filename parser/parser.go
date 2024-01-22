@@ -679,6 +679,9 @@ func (p *Parser) primary() (expression.Expr, error) {
 	if p.match(scanner.IDENTIFIER) {
 		return expression.NewVariableExpression(p.previous()), nil
 	}
+    if p.match(scanner.THIS) {
+        return expression.This{Keyword: p.previous()}, nil
+    }
 	parse_error := p.error(p.peek(), "Expect expression.")
 
 	return expression.Unary{}, &parse_error
