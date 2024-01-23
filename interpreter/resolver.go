@@ -196,6 +196,10 @@ func (r *Resolver) VisitClassStmt(stmt statement.Class) {
 	r.declare(stmt.Name)
 	r.define(stmt.Name)
 
+    r.beginScope()
+    defer r.endScope()
+    r.scopes[len(r.scopes)-1]["this"] = true
+
     for _, m := range stmt.Methods {
         r.resolveFunction(m, method)
     }

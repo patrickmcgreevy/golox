@@ -7,7 +7,7 @@ import (
 
 type LoxClass struct {
 	Name    string
-	Methods map[string]LoxCallable
+	Methods map[string]UserCallable
 }
 
 func (c LoxClass) String() string {
@@ -44,9 +44,10 @@ func (inst LoxInstance) Get(name scanner.Token) (any, *RuntimeError) {
         return val, nil
 	}
     
-    val, ok = inst.Class.Methods[name.Lexeme]
+    method, ok := inst.Class.Methods[name.Lexeme]
     if ok {
-        return val, nil
+        method.Bind(inst)
+        return method, nil
     }
 
     return nil, &RuntimeError{

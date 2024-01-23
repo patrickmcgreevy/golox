@@ -380,6 +380,14 @@ func (v *Interpreter) VisitLogical(e expression.Logical) {
 }
 
 func (v *Interpreter) VisitThis(e expression.This) {
+    val, err := v.lookUpVariable(e.Keyword, e)
+    if err != nil {
+        newError := newRuntimeError(e.Keyword, err.Error())
+        v.err = newError
+        return
+    }
+
+    v.val, v.err = val, nil
 }
 
 func (v *Interpreter) VisitSet(e expression.Set) {

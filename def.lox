@@ -1,5 +1,6 @@
 class DevonshireCream {
   serveOn() {
+    print this;
     return "Scones";
   }
 }
