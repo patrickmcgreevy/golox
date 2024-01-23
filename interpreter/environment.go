@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"fmt"
-	"golox/scanner"
 )
 
 type undefinedVariableError struct {
@@ -63,18 +62,18 @@ func (e *Environment) AssignAt(dist int, name string, value any) error {
     return newUndefinedVariableError(name)
 }
 
-func (e Environment) Get(name scanner.Token) (any, error) {
-	val, ok := e.values[name.Lexeme]
+func (e Environment) Get(name string) (any, error) {
+	val, ok := e.values[name]
 	if ok {
 		return val, nil
 	}
 	if e.enclosing != nil {
 		return e.enclosing.Get(name)
 	}
-	return nil, newUndefinedVariableError(name.Lexeme) 
+	return nil, newUndefinedVariableError(name) 
 }
 
-func (e Environment) GetAt(dist int, name scanner.Token) (any, error) {
+func (e Environment) GetAt(dist int, name string) (any, error) {
     var env *Environment
     var i int
 
@@ -86,7 +85,7 @@ func (e Environment) GetAt(dist int, name scanner.Token) (any, error) {
         return env.Get(name)
     }
 
-    return nil, newUndefinedVariableError(name.Lexeme)
+    return nil, newUndefinedVariableError(name)
 }
 
 func (e Environment) GetEnclosing() *Environment {

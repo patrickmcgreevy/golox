@@ -5,6 +5,8 @@ import (
 	"golox/scanner"
 )
 
+var constructor_name string = "init"
+
 type LoxClass struct {
 	Name    string
 	Methods map[string]UserCallable
@@ -15,10 +17,21 @@ func (c LoxClass) String() string {
 }
 
 func (c LoxClass) Call(interp Interpreter, args []any) (any, *RuntimeError) {
-	return NewLoxInstance(c), nil
+    instance := NewLoxInstance(c)
+    init, ok := c.Methods[constructor_name]
+    if ok {
+        init.Bind(instance)
+        init.Call(interp, args)
+    }
+	return instance, nil
 }
 func (c LoxClass) Arity() int {
-	return 0
+    val, ok := c.Methods[constructor_name]
+    if ok {
+        return val.Arity()
+    }
+
+    return 0
 }
 
 type LoxInstance struct {

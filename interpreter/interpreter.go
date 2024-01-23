@@ -443,9 +443,9 @@ func (v *Interpreter) VisitVariable(e expression.Variable) {
 func (v *Interpreter) lookUpVariable(name scanner.Token, expr expression.Expr) (any, error) {
 	distance, ok := v.locals[expr]
 	if ok {
-		return v.pEnvironment.GetAt(distance, name)
+		return v.pEnvironment.GetAt(distance, name.Lexeme)
 	} else {
-		return v.globals.Get(name)
+		return v.globals.Get(name.Lexeme)
 	}
 }
 
@@ -456,11 +456,11 @@ func (v *Interpreter) VisitBlockStmt(stmt statement.Block) {
 	v.executeBlock(stmt.GetStatements(), env)
 }
 func (v *Interpreter) VisitClassStmt(stmt statement.Class) {
-    methods := make(map[string]LoxCallable)
+    methods := make(map[string]UserCallable)
 
 	v.pEnvironment.Define(stmt.Name.Lexeme, nil)
     for _, m := range stmt.Methods {
-        methods[m.Name.Lexeme] = UserCallable{declaration: m, closure: *v.pEnvironment}
+        methods[m.Name.Lexeme] = UserCallable{declaration: m, closure: v.pEnvironment}
     }
     class := LoxClass{Name: stmt.Name.Lexeme, Methods: methods}
 	v.pEnvironment.Assign(stmt.Name.Lexeme, class)
@@ -473,7 +473,7 @@ func (v *Interpreter) VisitExpressionStmt(stmt statement.Expression) {
 	}
 }
 func (v *Interpreter) VisitFunctionStmt(stmt statement.Function) {
-	var funcDef UserCallable = UserCallable{declaration: stmt, closure: *v.pEnvironment}
+	var funcDef UserCallable = UserCallable{declaration: stmt, closure: v.pEnvironment}
 
 	v.pEnvironment.Define(stmt.Name.Lexeme, funcDef)
 }

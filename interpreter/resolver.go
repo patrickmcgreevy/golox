@@ -9,11 +9,18 @@ import (
 
 type scope = map[string]bool
 type functionType int
+type classType int
 
 const (
-	none functionType = iota
+	notFunction functionType = iota
 	function
-    method
+	method
+	initializer
+)
+
+const (
+	notClass classType = iota
+	class
 )
 
 type Resolver struct {
@@ -21,6 +28,7 @@ type Resolver struct {
 	scopes          []scope
 	err             error
 	currentFunction functionType
+	currentClass    classType
 }
 
 type resolver_error struct {
@@ -164,12 +172,16 @@ func (r *Resolver) VisitLogical(e expression.Logical) {
 }
 
 func (r *Resolver) VisitThis(e expression.This) {
-    r.resolveLocal(e, e.Keyword)
+	if r.currentClass != class {
+		r.err = resolver_error{prefix: fmt.Sprintf("[line %d]:", e.Keyword.Line), msg: "\"this\" can't be used outside of a class declaration"}
+		return
+	}
+	r.resolveLocal(e, e.Keyword)
 }
 
 func (r *Resolver) VisitSet(e expression.Set) {
-    r.resolve_expression(e.Object)
-    r.resolve_expression(e.Value)
+	r.resolve_expression(e.Object)
+	r.resolve_expression(e.Value)
 }
 
 func (r *Resolver) VisitUnary(e expression.Unary) {
@@ -192,17 +204,28 @@ func (r *Resolver) VisitBlockStmt(stmt statement.Block) {
 	defer r.endScope()
 	r.resolve_statements(stmt.GetStatements())
 }
+
+func (r *Resolver) changeClassType(t classType) {
+	r.currentClass = t
+}
+
 func (r *Resolver) VisitClassStmt(stmt statement.Class) {
 	r.declare(stmt.Name)
 	r.define(stmt.Name)
 
-    r.beginScope()
-    defer r.endScope()
-    r.scopes[len(r.scopes)-1]["this"] = true
+	r.beginScope()
+	defer r.endScope()
+	defer r.changeClassType(r.currentClass)
+	r.changeClassType(class)
+	r.scopes[len(r.scopes)-1]["this"] = true
 
-    for _, m := range stmt.Methods {
-        r.resolveFunction(m, method)
-    }
+	for _, m := range stmt.Methods {
+		if m.Name.Lexeme == constructor_name {
+			r.resolveFunction(m, initializer)
+		} else {
+			r.resolveFunction(m, method)
+        }
+	}
 }
 func (r *Resolver) VisitExpressionStmt(stmt statement.Expression) {
 	r.err = r.resolve_expression(stmt.Val)
@@ -230,10 +253,13 @@ func (r *Resolver) VisitPrintStmt(stmt statement.Print) {
 	r.err = r.resolve_expression(stmt.Val)
 }
 func (r *Resolver) VisitReturnStmt(stmt statement.Return) {
-	if r.currentFunction == none {
+	if r.currentFunction == notFunction {
 		r.err = resolver_error{prefix: "return statement", msg: "cannot call \"return\" outside of a function or method"}
 		return
-	}
+	} else if r.currentFunction == initializer {
+		r.err = resolver_error{prefix: "return statement", msg: "cannot call \"return\" inside of an initializer"}
+        return
+    }
 	r.err = r.resolve_expression(stmt.Return_expr)
 }
 func (r *Resolver) VisitVarStmt(stmt statement.Var) {
