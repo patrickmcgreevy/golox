@@ -22,6 +22,9 @@ type RuntimeError struct {
 }
 
 func (e RuntimeError) Error() string {
+    if e.tok.Lexeme != "" {
+        return fmt.Sprintf("[line %d]: %s", e.tok.Line, e.error)
+    }
 	return e.error
 }
 
@@ -35,8 +38,8 @@ func newReturnError(val any) *RuntimeError {
 }
 
 func newRuntimeError(operator scanner.Token, message string) *RuntimeError {
-	msg := fmt.Sprintf("[line %d]: %s", operator.Line, message)
-	new_err := RuntimeError{error: msg, tok: operator}
+	// msg := fmt.Sprintf("[line %d]: %s", operator.Line, message)
+	new_err := RuntimeError{error: message, tok: operator}
 	return &new_err
 }
 
@@ -456,13 +459,36 @@ func (v *Interpreter) VisitBlockStmt(stmt statement.Block) {
 	v.executeBlock(stmt.GetStatements(), env)
 }
 func (v *Interpreter) VisitClassStmt(stmt statement.Class) {
+    var parentClass LoxClass
+    var ok bool
     methods := make(map[string]UserCallable)
 
+    if stmt.ParentClass != nil {
+        parent, err := v.Evaluate(stmt.ParentClass)
+        if err != nil {
+            v.err = err
+            return
+        }
+
+        parentClass, ok = parent.(LoxClass)
+        if !ok {
+            v.err = &RuntimeError{error: "superclass must be a class", tok: stmt.ParentClass.GetToken()}
+            return
+        }
+    }
 	v.pEnvironment.Define(stmt.Name.Lexeme, nil)
+    if stmt.ParentClass != nil {
+        env := NewEnvironment()
+        v.pushEnvironment(&env)
+        v.pEnvironment.Define("super", parentClass)
+    }
     for _, m := range stmt.Methods {
         methods[m.Name.Lexeme] = UserCallable{declaration: m, closure: v.pEnvironment}
     }
-    class := LoxClass{Name: stmt.Name.Lexeme, Methods: methods}
+    class := LoxClass{Name: stmt.Name.Lexeme, Methods: methods, Parent: &parentClass}
+    if stmt.ParentClass != nil {
+        v.popEnvironment()
+    }
 	v.pEnvironment.Assign(stmt.Name.Lexeme, class)
     
 }

@@ -285,12 +285,21 @@ func (p *Parser) block() ([]statement.Statement, error) {
 
 func (p *Parser) classDeclaration() (statement.Statement, error) {
 	var classId scanner.Token
+	var parentClass *expression.Variable
 	var err error
 	var funcs []statement.Function
 
 	classId, err = p.consume(scanner.IDENTIFIER, "expected an identifier")
 	if err != nil {
 		return nil, err
+	}
+
+	if p.match(scanner.LESS) {
+		_, err = p.consume(scanner.IDENTIFIER, "expected an identifier")
+		if err != nil {
+			return nil, err
+		}
+        parentClass = &expression.Variable{Name: p.previous()}
 	}
 
 	_, err = p.consume(scanner.LEFT_BRACE, "expected '{'")
@@ -314,7 +323,11 @@ func (p *Parser) classDeclaration() (statement.Statement, error) {
 		funcs = append(funcs, fun)
 	}
 
-	return statement.Class{Name: classId, Methods: funcs}, nil // return class here
+	return statement.Class{
+		Name:        classId,
+		Methods:     funcs,
+		ParentClass: parentClass,
+	}, nil // return class here
 }
 
 func (p *Parser) funcDeclaration() (statement.Statement, error) {
@@ -410,9 +423,9 @@ func (p *Parser) expression() (expression.Expr, error) {
 
 func (p *Parser) assignment() (expression.Expr, error) {
 	left, err := p.logic_or()
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
 	if p.match(scanner.EQUAL) {
 		right, err := p.assignment()
@@ -420,15 +433,15 @@ func (p *Parser) assignment() (expression.Expr, error) {
 			return nil, err
 		}
 
-        switch t := left.(type) {
-        case expression.Variable:
-            return expression.Assign{Name: t.GetToken(), Value: right}, nil
-        case expression.Get:
-            return expression.Set{Object: t.Object, Name: t.Name, Value: right}, nil // Set expression
-        default:
+		switch t := left.(type) {
+		case expression.Variable:
+			return expression.Assign{Name: t.GetToken(), Value: right}, nil
+		case expression.Get:
+			return expression.Set{Object: t.Object, Name: t.Name, Value: right}, nil // Set expression
+		default:
 			err := NewParseError("Left side of assignment must be a variable.")
 			return nil, &err
-        }
+		}
 
 		val, ok := left.(expression.Variable)
 		if !ok {
@@ -595,21 +608,21 @@ func (p *Parser) call() (expression.Expr, error) {
 		return nil, err
 	}
 
-	for ;; {
-        if p.match(scanner.LEFT_PAREN) {
-            expr, err = p.add_args(expr)
-            if err != nil {
-                return nil, err
-            }
-        } else if p.match(scanner.DOT) {
-            name, err := p.consume(scanner.IDENTIFIER, "expected an identifier afer \".\"")
-            if err != nil {
-                return nil, err
-            }
-            expr = expression.Get{Object: expr, Name: name}
-        } else {
-            break
-        }
+	for {
+		if p.match(scanner.LEFT_PAREN) {
+			expr, err = p.add_args(expr)
+			if err != nil {
+				return nil, err
+			}
+		} else if p.match(scanner.DOT) {
+			name, err := p.consume(scanner.IDENTIFIER, "expected an identifier afer \".\"")
+			if err != nil {
+				return nil, err
+			}
+			expr = expression.Get{Object: expr, Name: name}
+		} else {
+			break
+		}
 	}
 
 	return expr, nil
@@ -679,8 +692,21 @@ func (p *Parser) primary() (expression.Expr, error) {
 	if p.match(scanner.IDENTIFIER) {
 		return expression.NewVariableExpression(p.previous()), nil
 	}
-    if p.match(scanner.THIS) {
-        return expression.This{Keyword: p.previous()}, nil
+	if p.match(scanner.THIS) {
+		return expression.This{Keyword: p.previous()}, nil
+	}
+    if p.match(scanner.SUPER) {
+        keyword := p.previous()
+        _, err := p.consume(scanner.DOT, "expected \".\" after \"super\"")
+        if err != nil {
+            return nil, err
+        }
+        id, err := p.consume(scanner.IDENTIFIER, "expected an identifier after 'super.'")
+        if err != nil {
+            return nil, err
+        }
+
+        return expression.Super{Keyword: keyword, Method: id}, nil
     }
 	parse_error := p.error(p.peek(), "Expect expression.")
 

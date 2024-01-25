@@ -1,4 +1,10 @@
-class Cake {
+class BakedGood {
+    bestBy() {
+        print "YESTERDAY";
+    }
+}
+
+class Cake < BakedGood {
   init(flavor) {
       this.flavor = flavor;
   }
@@ -14,3 +20,4 @@ cake.taste();
 cake.flavor = "German chocolate";
 cake.taste(); // Prints "The German chocolate cake is delicious!".
 print cake.init("peach");
+cake.bestBy();

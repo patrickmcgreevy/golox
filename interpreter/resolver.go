@@ -184,6 +184,11 @@ func (r *Resolver) VisitSet(e expression.Set) {
 	r.resolve_expression(e.Value)
 }
 
+func (r *Resolver) VisitSuper(e expression.Super) {
+    r.resolveLocal(e, e.Keyword)
+
+}
+
 func (r *Resolver) VisitUnary(e expression.Unary) {
 	r.err = r.resolve_expression(e.Right)
 }
@@ -213,6 +218,17 @@ func (r *Resolver) VisitClassStmt(stmt statement.Class) {
 	r.declare(stmt.Name)
 	r.define(stmt.Name)
 
+	if stmt.ParentClass != nil {
+        if stmt.ParentClass.GetToken().Lexeme == stmt.Name.Lexeme {
+            r.err = resolver_error{prefix: "class statement", msg: "a class cannot inherit from itself"}
+            return
+        }
+		r.resolve_expression(stmt.ParentClass)
+        r.beginScope()
+        defer r.endScope()
+        r.scopes[len(r.scopes)-1]["super"] = true
+	}
+
 	r.beginScope()
 	defer r.endScope()
 	defer r.changeClassType(r.currentClass)
@@ -224,7 +240,7 @@ func (r *Resolver) VisitClassStmt(stmt statement.Class) {
 			r.resolveFunction(m, initializer)
 		} else {
 			r.resolveFunction(m, method)
-        }
+		}
 	}
 }
 func (r *Resolver) VisitExpressionStmt(stmt statement.Expression) {
@@ -258,8 +274,8 @@ func (r *Resolver) VisitReturnStmt(stmt statement.Return) {
 		return
 	} else if r.currentFunction == initializer {
 		r.err = resolver_error{prefix: "return statement", msg: "cannot call \"return\" inside of an initializer"}
-        return
-    }
+		return
+	}
 	r.err = r.resolve_expression(stmt.Return_expr)
 }
 func (r *Resolver) VisitVarStmt(stmt statement.Var) {

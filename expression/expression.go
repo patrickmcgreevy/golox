@@ -138,24 +138,37 @@ func (e Set) Accept(v Visitor) {
 	v.VisitSet(e)
 }
 
+type Super struct {
+	Keyword scanner.Token
+	Method  scanner.Token
+}
+
+func (e Super) Accept(v Visitor) {
+	v.VisitSuper(e)
+}
+
+func (e Super) Expand_to_string() string {
+    return e.Keyword.Lexeme + "." + e.Method.Lexeme
+}
+
 type This struct {
-    Keyword scanner.Token
+	Keyword scanner.Token
 }
 
 func (e This) Accept(v Visitor) {
-    v.VisitThis(e)
+	v.VisitThis(e)
 }
 
 func (e This) Expand_to_string() string {
-    return "this"
+	return "this"
 }
 
 type Variable struct {
-	name scanner.Token
+	Name scanner.Token
 }
 
 func NewVariableExpression(name scanner.Token) Variable {
-	return Variable{name: name}
+	return Variable{Name: name}
 }
 
 func (e Variable) Accept(v Visitor) {
@@ -163,11 +176,11 @@ func (e Variable) Accept(v Visitor) {
 }
 
 func (e Variable) GetName() string {
-	return e.name.Lexeme
+	return e.Name.Lexeme
 }
 
 func (e Variable) GetToken() scanner.Token {
-	return e.name
+	return e.Name
 }
 
 func (e Assign) Expand_to_string() string {
@@ -230,7 +243,7 @@ func (e Unary) Expand_to_string() string {
 }
 
 func (e Variable) Expand_to_string() string {
-	return e.name.Lexeme
+	return e.Name.Lexeme
 }
 
 type Visitor interface {
@@ -242,7 +255,8 @@ type Visitor interface {
 	VisitLiteral(e Literal)
 	VisitLogical(e Logical)
 	VisitSet(e Set)
-    VisitThis(e This)
+	VisitSuper(e Super)
+	VisitThis(e This)
 	VisitUnary(e Unary)
 	VisitVariable(e Variable)
 }
@@ -322,15 +336,17 @@ func (v *ExpressionStringVisitor) VisitLogical(e Logical) {
 }
 
 func (v *ExpressionStringVisitor) VisitThis(e This) {
-    v.expr_string_builder.WriteString("this")
+	v.expr_string_builder.WriteString("this")
+}
+
+func (v *ExpressionStringVisitor) VisitSuper(e Super) {
+    v.expr_string_builder.WriteString(fmt.Sprintf("%s.%s", e.Keyword.Lexeme, e.Method.Lexeme))
 }
 
 func (v *ExpressionStringVisitor) VisitSet(e Set) {
-    e.Object.Accept(v)
-    v.expr_string_builder.WriteString(".")
-    v.expr_string_builder.WriteString(e.Name.Lexeme)
-    v.expr_string_builder.WriteString(" = ")
-    e.Value.Accept(v)
+	e.Object.Accept(v)
+    v.expr_string_builder.WriteString(fmt.Sprintf(".%s = ", e.Name.Lexeme))
+	e.Value.Accept(v)
 }
 
 func (v *ExpressionStringVisitor) VisitUnary(e Unary) {
@@ -338,5 +354,5 @@ func (v *ExpressionStringVisitor) VisitUnary(e Unary) {
 }
 
 func (v *ExpressionStringVisitor) VisitVariable(e Variable) {
-	v.expr_string_builder.WriteString(e.name.Lexeme)
+	v.expr_string_builder.WriteString(e.Name.Lexeme)
 }

@@ -10,6 +10,7 @@ var constructor_name string = "init"
 type LoxClass struct {
 	Name    string
 	Methods map[string]UserCallable
+    Parent *LoxClass
 }
 
 func (c LoxClass) String() string {
@@ -32,6 +33,22 @@ func (c LoxClass) Arity() int {
     }
 
     return 0
+}
+
+func (c LoxClass) GetMethod(name string) (UserCallable, error) {
+    method, ok := c.Methods[name]
+    if ok {
+        return method, nil
+    }
+
+    for curParent := c.Parent; curParent != nil; curParent = curParent.Parent {
+        method, ok = curParent.Methods[name]
+        if ok {
+            return method, nil
+        }
+    }
+
+    return UserCallable{}, RuntimeError{error: fmt.Sprintf("%s is not a method of %s", name, c)}
 }
 
 type LoxInstance struct {
@@ -57,8 +74,8 @@ func (inst LoxInstance) Get(name scanner.Token) (any, *RuntimeError) {
         return val, nil
 	}
     
-    method, ok := inst.Class.Methods[name.Lexeme]
-    if ok {
+    method, err := inst.Class.GetMethod(name.Lexeme)
+    if err == nil {
         method.Bind(inst)
         return method, nil
     }

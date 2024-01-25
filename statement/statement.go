@@ -40,6 +40,7 @@ func (s Block) GetStatements() []Statement {
 type Class struct {
     Name scanner.Token
     Methods []Function
+    ParentClass *expression.Variable
 }
 
 func (s Class) Accept(v StatementVisitor) {
