@@ -2,6 +2,8 @@ package interpreter
 
 import (
 	"fmt"
+    "bufio"
+    "os"
 	"golox/errorhandling"
 	"golox/expression"
 	"golox/scanner"
@@ -67,6 +69,18 @@ func NewInterpreter() Interpreter {
 	globals.Define("clock", BuiltinCallable{params: make([]string, 0), foo: func(a Interpreter, b []any) any {
 		return float64(time.Now().UnixMilli()) / 1000
 	}})
+    globals.Define("input", BuiltinCallable{params: make([]string, 0), foo: func(a Interpreter, b []any) any {
+        reader := bufio.NewReader(os.Stdin)
+        fmt.Print("> ")
+        line, err := reader.ReadString('\n')
+        if err != nil {
+            if err.Error() == "EOF" {
+                return nil
+            }
+            panic(err)
+        }
+        return line
+    }})
 	return Interpreter{val: nil, err: nil, pEnvironment: &env, interactiveMode: false, locals: make(map[expression.Expr]int), globals: globals}
 }
 

@@ -13,8 +13,8 @@ func (c BuiltinCallable) Arity() int {
 	return len(c.params)
 }
 
-func (c BuiltinCallable) Call(interp Interpreter, args []any) any {
-	return c.foo(interp, args)
+func (c BuiltinCallable) Call(interp Interpreter, args []any) (any, *RuntimeError) {
+	return c.foo(interp, args), nil
 }
 
 func (c BuiltinCallable) String() string {

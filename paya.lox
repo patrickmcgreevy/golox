@@ -1,0 +1,8 @@
+print "Who is the most beautiful woman in the world? Answer below:";
+var ans = input();
+print "you said";
+print ans;
+if (ans != "maya" and ans != "Maya") {
+    print "WRONG!!!";
+    print "The most beautiful woman in the world is Maya Indira Kivita Short!";
+}
