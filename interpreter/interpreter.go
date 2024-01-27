@@ -414,6 +414,39 @@ func (v *Interpreter) VisitSet(e expression.Set) {
 	v.val = val
 }
 
+func (v *Interpreter) VisitSuper(e expression.Super) {
+    dist := v.locals[e]
+    val, err := v.pEnvironment.GetAt(dist, "super")
+    if err != nil {
+        v.err = &RuntimeError{error: err.Error(), tok: e.Keyword}
+        return
+    }
+
+    super, ok := val.(LoxClass)
+    if !ok {
+        v.err = &RuntimeError{error: "super did not evaluate to a class", tok: e.Keyword}
+        return
+    }
+
+    val, err = v.pEnvironment.GetAt(dist-1, "this")
+    if err != nil {
+        v.err = &RuntimeError{error: err.Error(), tok: e.Keyword}
+        return
+    }
+    instance, ok := val.(LoxInstance)
+    if !ok {
+        v.err = &RuntimeError{error: "this did not evaluate to an object", tok: e.Keyword}
+        return
+    }
+
+    method, err := super.GetMethod(e.Method.Lexeme)
+    if err != nil {
+        v.err = &RuntimeError{error: err.Error(), tok: e.Method}
+        return
+    }
+    v.val = method.Bind(instance)
+}
+
 func (v *Interpreter) VisitUnary(e expression.Unary) {
 	right, err := v.Evaluate(e.Right)
 	if err != nil {
