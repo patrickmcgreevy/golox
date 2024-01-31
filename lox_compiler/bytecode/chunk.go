@@ -18,14 +18,18 @@ func NewChunk() Chunk {
 }
 
 func (c *Chunk) AddConstant(v Value) int {
-    return c.Constants.addConstant(v)
+	return c.Constants.addConstant(v)
+}
+
+func (c *Chunk) AddInst(i Instruction) {
+    c.InstructionSlice = append(c.InstructionSlice, i)
 }
 
 func (c Chunk) Disassemble(name string) error {
 	fmt.Println(fmt.Sprintf("== %s ==", name))
-    fmt.Println(c.Constants)
+	fmt.Println(c.Constants)
 	for i, v := range c.InstructionSlice {
-		_, err := fmt.Printf("%04d %s\n", i, v.String())
+		_, err := fmt.Printf("%04d %-4d  %s\n", i, v.SourceLineNumer, v.String())
 		if err != nil {
 			return err
 		}
