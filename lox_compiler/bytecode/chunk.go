@@ -8,6 +8,7 @@ type InstructionSlice []Instruction
 type Chunk struct {
 	InstructionSlice
 	Constants ValueSlice
+    Values ValueStack
 }
 
 func NewChunk() Chunk {
