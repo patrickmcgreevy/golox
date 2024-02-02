@@ -10,11 +10,16 @@ func _() {
 	var x [1]struct{}
 	_ = x[OpReturn-0]
 	_ = x[OpConstant-1]
+	_ = x[OpNegate-2]
+	_ = x[OpAdd-3]
+	_ = x[OpSubtract-4]
+	_ = x[OpMultiply-5]
+	_ = x[OpDivide-6]
 }
 
-const _OpCode_name = "OpReturnOpConstant"
+const _OpCode_name = "OpReturnOpConstantOpNegateOpAddOpSubtractOpMultiplyOpDivide"
 
-var _OpCode_index = [...]uint8{0, 8, 18}
+var _OpCode_index = [...]uint8{0, 8, 18, 26, 31, 41, 51, 59}
 
 func (i OpCode) String() string {
 	if i >= OpCode(len(_OpCode_index)-1) {

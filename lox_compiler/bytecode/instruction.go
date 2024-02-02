@@ -13,12 +13,17 @@ type OperandArray [2]Operand
 const (
 	OpReturn OpCode = iota
 	OpConstant
+	OpNegate
+	OpAdd
+	OpSubtract
+	OpMultiply
+	OpDivide
 )
 
 type Instruction struct {
-	Code     OpCode
-	Operands OperandArray
-    SourceLineNumer int
+	Code            OpCode
+	Operands        OperandArray
+	SourceLineNumer int
 }
 
 func NewReturnInst(line int) Instruction {
@@ -30,6 +35,26 @@ func NewConstantInst(val Operand, line int) Instruction {
 	ret.Operands[0] = val
 
 	return ret
+}
+
+func NewNegateInst(line int) Instruction {
+	return Instruction{Code: OpNegate, SourceLineNumer: line}
+}
+
+func NewAddInst(line int) Instruction {
+	return Instruction{Code: OpAdd, SourceLineNumer: line}
+}
+
+func NewSubtractInst(line int) Instruction {
+	return Instruction{Code: OpSubtract, SourceLineNumer: line}
+}
+
+func NewMultiplyInst(line int) Instruction {
+	return Instruction{Code: OpMultiply, SourceLineNumer: line}
+}
+
+func NewDivideInst(line int) Instruction {
+	return Instruction{Code: OpDivide, SourceLineNumer: line}
 }
 
 func (c Instruction) String() string {
