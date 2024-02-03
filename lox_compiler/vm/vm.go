@@ -3,6 +3,8 @@ package vm
 import (
 	"fmt"
 	"lox-compiler/bytecode"
+	"lox-compiler/compiler"
+    "lox-compiler/debug"
 )
 
 type InterpreterResult int
@@ -35,11 +37,22 @@ func (e RuntimeError) Error() string {
     return fmt.Sprintf("encountered a(n) %v error", e.errCode)
 }
 
-func (vm *VirtualMachine) Interpret(c *bytecode.Chunk) InterpreterResult {
-	vm.chunk = *c
-	// vm.chunk.Disassemble("main")
 
-	return vm.run()
+func (vm *VirtualMachine) Interpret(s string) InterpreterResult {
+    chunk, err := compiler.Compile(s)
+    if err != nil {
+        fmt.Println(err.Error())
+        return Interpret_Compile_Error
+    }
+
+    return vm.run_bytecode(chunk)
+}
+
+func (vm *VirtualMachine) run_bytecode(c *bytecode.Chunk) InterpreterResult {
+    vm.chunk = *c
+    // vm.chunk.Disassemble("main")
+
+    return vm.run()
 }
 
 // This is a performance critical path. There are techniques to speed it up.
@@ -49,8 +62,8 @@ func (vm *VirtualMachine) run() InterpreterResult {
     var inst bytecode.Instruction
 
     for inst, err = vm.read_inst(); err == nil; inst, err = vm.read_inst() {
-		debug("%v", vm.chunk.Values)
-		debug("%s", inst.String())
+		debug.Printf("%v", vm.chunk.Values)
+		debug.Printf("%s", inst.String())
 		switch inst.Code {
 		case bytecode.OpReturn:
 			fmt.Println(vm.chunk.Values.Pop())

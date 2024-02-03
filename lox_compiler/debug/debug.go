@@ -1,12 +1,11 @@
 // +build debug
 
-package vm
+package debug
 
 import (
 	"fmt"
 )
 
-func debug(format string, args ...any) {
-    
+func Printf(format string, args ...any) {
 	fmt.Println(fmt.Sprintf(format, args...))
 }
