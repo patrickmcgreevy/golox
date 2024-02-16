@@ -13,7 +13,7 @@ func repl() {
     vm := vm.VirtualMachine{}
 
     for ;; {
-        fmt.Println("> ")
+        fmt.Print("> ")
         line, err := reader.ReadString(byte('\n'))
         if err != nil {
             return

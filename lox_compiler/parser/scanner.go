@@ -1,7 +1,8 @@
-package scanner
+package parser
 
 import (
 	"fmt"
+	"lox-compiler/debug"
 	"strconv"
 	"unicode"
 )
@@ -132,7 +133,7 @@ func (s *Scanner) scanToken() *ScannerError {
 	case '"':
 		err := s.tokenize_string()
 		if err != nil {
-			return err
+			s.addErrorToken(*err)
 		}
 
 	default:
@@ -141,11 +142,13 @@ func (s *Scanner) scanToken() *ScannerError {
 		} else if unicode.IsLetter(c) || c == '_' {
 			s.tokenize_identifier()
 		} else {
-			return &ScannerError{
-				line: s.line,
-				seq:  s.source[s.start:s.current],
-				err:  "unexpected character",
-			}
+			s.addErrorToken(
+				ScannerError{
+					line: s.line,
+					seq:  s.source[s.start:s.current],
+					err:  "unexpected character",
+				},
+			)
 		}
 	}
 
@@ -265,4 +268,13 @@ func (s Scanner) peekNext() rune {
 	}
 
 	return rune(s.source[s.current+1])
+}
+
+func (s *Scanner) addErrorToken(e ScannerError) {
+    debug.Printf("%s", e.Error())
+	s.tokens = append(s.tokens, Token{Token_type: ERROR, Lexeme: e.Error(), Literal: nil, Line: e.line})
+}
+
+func newErrorToken(e ScannerError) Token {
+	return Token{Token_type: ERROR, Lexeme: e.Error(), Literal: nil, Line: e.line}
 }

@@ -1,12 +1,13 @@
-package scanner
+package parser
 
 type TokenType int
 
 //go:generate stringer -type=TokenType
-
 const (
+    ERROR TokenType = iota
+
 	// Single-character tokens
-	LEFT_PAREN TokenType = iota
+	LEFT_PAREN
 	RIGHT_PAREN
 	LEFT_BRACE
 	RIGHT_BRACE
@@ -53,10 +54,6 @@ const (
 
 	EOF
 )
-
-type Literal interface {
-	get_literal_as_string() string
-}
 
 type Token struct {
 	Token_type TokenType

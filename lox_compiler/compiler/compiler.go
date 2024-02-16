@@ -3,8 +3,8 @@ package compiler
 import (
 	"fmt"
 	"lox-compiler/bytecode"
-	"lox-compiler/scanner"
     "lox-compiler/debug"
+    "lox-compiler/parser"
 )
 
 type CompilationError struct {
@@ -16,11 +16,13 @@ func (e CompilationError) Error() string {
 }
 
 func Compile(source string) (*bytecode.Chunk, *CompilationError) {
-    s := scanner.NewScanner(source)
+    s := parser.NewScanner(source)
     tokens, err := s.ScanTokens()
     if err != nil {
         return nil, &CompilationError{err: err.Error()}
     }
+    p := parser.NewParser(tokens)
+    p.Parse()
     debug.Printf("%v", tokens)
     c := bytecode.NewChunk()
     c.AddInst(bytecode.NewConstantInst(bytecode.Operand(c.AddConstant(32)), 0))
