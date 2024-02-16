@@ -1,4 +1,4 @@
 package parser
 
-type astNode {
+type ASTNode interface {
 }
