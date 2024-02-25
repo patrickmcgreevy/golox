@@ -23,6 +23,10 @@ func (e ScannerError) Error() string {
 	return fmt.Sprintf("parsing error on line %d at \"%s\": %s", e.line, e.seq, e.err)
 }
 
+func Scan(source string) ([]Token, *ScannerError) {
+	return NewScanner(source).ScanTokens()
+}
+
 func NewScanner(source string) *Scanner {
 	ret := Scanner{source: source, tokens: []Token{}, start: 0, current: 0, line: 1}
 
@@ -225,7 +229,7 @@ func (s *Scanner) tokenize_string() *ScannerError {
 	s.advance()
 	new_string = s.source[s.start+1 : s.current-1]
 
-	s.addTokenLiteral(STRING, &new_string)
+	s.addTokenLiteral(STRING, new_string)
 
 	return nil
 }
@@ -271,7 +275,7 @@ func (s Scanner) peekNext() rune {
 }
 
 func (s *Scanner) addErrorToken(e ScannerError) {
-    debug.Printf("%s", e.Error())
+	debug.Printf("%s", e.Error())
 	s.tokens = append(s.tokens, Token{Token_type: ERROR, Lexeme: e.Error(), Literal: nil, Line: e.line})
 }
 

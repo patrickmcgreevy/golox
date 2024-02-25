@@ -7,7 +7,7 @@ import (
 
 type OpCode uint8
 type Operand int
-type OperandArray [2]Operand
+type OperandArray [1]Operand
 
 //go:generate stringer -type=OpCode
 const (
@@ -18,12 +18,17 @@ const (
 	OpSubtract
 	OpMultiply
 	OpDivide
+    OpPrint
 )
 
 type Instruction struct {
 	Code            OpCode
 	Operands        OperandArray
 	SourceLineNumer int
+}
+
+func NewPrintInst(line int) Instruction {
+    return Instruction{Code: OpPrint, SourceLineNumer: line}
 }
 
 func NewReturnInst(line int) Instruction {

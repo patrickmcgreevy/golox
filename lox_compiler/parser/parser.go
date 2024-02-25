@@ -5,6 +5,7 @@ import "fmt"
 type Parser struct {
 	tokens  []Token
 	current int
+	prev    *Token
 }
 
 func NewParser(tokens []Token) Parser {
@@ -17,7 +18,8 @@ func (p *Parser) Parse() []Statement {
 	for !at_end {
 		stmt, err := p.declaration()
 		if err != nil {
-			errorhandling.RuntimeError(err)
+			// errorhandling.RuntimeError(err)
+			fmt.Println("ERRROR")
 			return nil
 		}
 		statements = append(statements, stmt)
@@ -55,7 +57,7 @@ func (p *Parser) statement() (Statement, error) {
 		if err != nil {
 			return nil, err
 		}
-		return NewBlockStmt(stmts), nil
+		return Block{statements: stmts}, nil
 	}
 
 	if p.match(IF) {
@@ -103,7 +105,7 @@ func (p *Parser) forStatement() (Statement, error) {
 	var increment_expression Expr
 	var loop_stmt Statement
 
-	_, err := p.consume(LEFT_PAREN, "Expected '(' after 'for'.")
+	_, err := p.consume(LEFT_PAREN, "expected '(' after 'for'.")
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +130,7 @@ func (p *Parser) forStatement() (Statement, error) {
 		if err != nil {
 			return nil, err
 		}
-		_, err = p.consume(SEMICOLON, "Expected ';' after conditional ")
+		_, err = p.consume(SEMICOLON, "expected ';' after conditional ")
 		if err != nil {
 			return nil, err
 		}
@@ -141,7 +143,7 @@ func (p *Parser) forStatement() (Statement, error) {
 		if err != nil {
 			return nil, err
 		}
-		_, err = p.consume(RIGHT_PAREN, "Expected ')' after expression")
+		_, err = p.consume(RIGHT_PAREN, "expected ')' after expression")
 		if err != nil {
 			return nil, err
 		}
@@ -152,16 +154,16 @@ func (p *Parser) forStatement() (Statement, error) {
 		return nil, err
 	}
 	if increment_expression != nil {
-		body := []Statement{loop_stmt, NewExpressionStmt(increment_expression)}
-		loop_stmt = NewBlockStmt(body)
+		body := []Statement{loop_stmt, ExpressionStmt{increment_expression}}
+		loop_stmt = Block{statements: body}
 	}
 	if conditional_expr == nil {
 		conditional_expr = Literal{Value: true}
 	}
-	var body Statement = NewWhileStmt(conditional_expr, loop_stmt)
+	var body Statement = While{Conditional: conditional_expr, Stmt: loop_stmt}
 	if initializer_stmt != nil {
 		tmp := []Statement{initializer_stmt, body}
-		body = NewBlockStmt(tmp)
+		body = Block{statements: tmp}
 	}
 
 	return body, nil // for stmt
@@ -170,7 +172,7 @@ func (p *Parser) forStatement() (Statement, error) {
 
 func (p *Parser) whileStatement() (Statement, error) {
 	var err error
-	_, err = p.consume(LEFT_PAREN, "Expected '(' after 'while'.")
+	_, err = p.consume(LEFT_PAREN, "expected '(' after 'while'.")
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +182,7 @@ func (p *Parser) whileStatement() (Statement, error) {
 		return nil, err
 	}
 
-	_, err = p.consume(RIGHT_PAREN, "Expected ')' after conditional ")
+	_, err = p.consume(RIGHT_PAREN, "expected ')' after conditional ")
 	if err != nil {
 		return nil, err
 	}
@@ -190,13 +192,13 @@ func (p *Parser) whileStatement() (Statement, error) {
 		return nil, err
 	}
 
-	return NewWhileStmt(conditional_stmt, while_body), nil
+	return While{Conditional: conditional_stmt, Stmt: while_body}, nil
 }
 
 func (p *Parser) ifStatement() (Statement, error) {
 	var else_stmt Statement
 
-	_, err := p.consume(LEFT_PAREN, "Expected '(' after 'if'.")
+	_, err := p.consume(LEFT_PAREN, "expected '(' after 'if'.")
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +208,7 @@ func (p *Parser) ifStatement() (Statement, error) {
 		return nil, err
 	}
 
-	_, err = p.consume(RIGHT_PAREN, "Expected ')' after ")
+	_, err = p.consume(RIGHT_PAREN, "expected ')' after ")
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +225,8 @@ func (p *Parser) ifStatement() (Statement, error) {
 		return nil, err
 	}
 
-	return NewIfStatement(expr, if_stmt, else_stmt), nil
+	// return NewIfStatement(expr, if_stmt, else_stmt), nil
+	return If{Conditional: expr, If_stmt: if_stmt, Else_stmt: else_stmt}, nil
 }
 
 func (p *Parser) printStatement() (Statement, error) {
@@ -232,13 +235,13 @@ func (p *Parser) printStatement() (Statement, error) {
 	if err != nil {
 		return stmt, err
 	}
-	_, err = p.consume(SEMICOLON, "Expected ';' after value.")
+	_, err = p.consume(SEMICOLON, "expected ';' after value.")
 	if err != nil {
 		// The semi colon after "false" is being consumed. I expect it's a scanning bug.
 		return stmt, err
 	}
 
-	return NewPrintStmt(expr), nil
+	return Print{Val: expr}, nil
 }
 
 func (p *Parser) expressionStatement() (Statement, error) {
@@ -247,12 +250,12 @@ func (p *Parser) expressionStatement() (Statement, error) {
 	if err != nil {
 		return stmt, err
 	}
-	_, err = p.consume(SEMICOLON, "Expected ';' after ")
+	_, err = p.consume(SEMICOLON, "expected ';' at end of line")
 	if err != nil {
 		return stmt, err
 	}
 
-	return NewExpressionStmt(expr), nil
+	return ExpressionStmt{Val: expr}, nil
 }
 
 func (p *Parser) block() ([]Statement, error) {
@@ -294,7 +297,7 @@ func (p *Parser) classDeclaration() (Statement, error) {
 		if err != nil {
 			return nil, err
 		}
-        parentClass = &Variable{Name: p.previous()}
+		parentClass = &Variable{Name: p.previous()}
 	}
 
 	_, err = p.consume(LEFT_BRACE, "expected '{'")
@@ -409,7 +412,7 @@ func (p *Parser) varDeclaration() (Statement, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewVarStmt(name, initializer), nil
+	return Var{Name: name, Initializer: initializer}, nil
 }
 
 func (p *Parser) expression() (Expr, error) {
@@ -430,7 +433,7 @@ func (p *Parser) assignment() (Expr, error) {
 
 		switch t := left.(type) {
 		case Variable:
-			return Assign{Name: t.GetToken(), Value: right}, nil
+			return Assign{Name: t.Name, Value: right}, nil
 		case Get:
 			return Set{Object: t.Object, Name: t.Name, Value: right}, nil // Set expression
 		default:
@@ -443,7 +446,7 @@ func (p *Parser) assignment() (Expr, error) {
 			err := NewParseError("Left side of assignment must be a variable.")
 			return nil, &err
 		}
-		return Assign{Name: val.GetToken(), Value: right}, nil
+		return Assign{Name: val.Name, Value: right}, nil
 	}
 
 	return left, nil
@@ -462,7 +465,7 @@ func (p *Parser) logic_or() (Expr, error) {
 			return nil, err
 		}
 
-		return NewLogical(left, op, right), nil
+		return Logical{Left: left, Operator: op, Right: right}, nil
 	}
 
 	return left, nil
@@ -481,7 +484,7 @@ func (p *Parser) logic_and() (Expr, error) {
 			return nil, err
 		}
 
-		return NewLogical(left, op, right), nil
+		return Logical{Left: left, Operator: op, Right: right}, nil
 	}
 
 	return left, nil
@@ -626,7 +629,7 @@ func (p *Parser) call() (Expr, error) {
 func (p *Parser) add_args(expr Expr) (Expr, error) {
 	paren := p.previous()
 	if p.match(RIGHT_PAREN) {
-		return NewCall(expr, paren, nil), nil
+		return Call{Callee: expr, Paren: paren, Args: nil}, nil
 	}
 
 	args, err := p.arguments()
@@ -634,12 +637,12 @@ func (p *Parser) add_args(expr Expr) (Expr, error) {
 		return nil, err
 	}
 
-	_, err = p.consume(RIGHT_PAREN, "Expected ')' after arguments.")
+	_, err = p.consume(RIGHT_PAREN, "expected ')' after arguments.")
 	if err != nil {
 		return nil, err
 	}
 
-	return NewCall(expr, paren, args), nil // call expr with args, nil
+	return Call{Callee: expr, Paren: paren, Args: args}, nil // call expr with args, nil
 }
 
 func (p *Parser) arguments() ([]Expr, error) {
@@ -677,7 +680,7 @@ func (p *Parser) primary() (Expr, error) {
 	}
 	if p.match(LEFT_PAREN) {
 		expr, err = p.expression()
-		_, err = p.consume(RIGHT_PAREN, "Expected right paren!")
+		_, err = p.consume(RIGHT_PAREN, "expected right paren!")
 		if err != nil {
 			return Unary{}, err
 		}
@@ -685,27 +688,31 @@ func (p *Parser) primary() (Expr, error) {
 		return Grouping{Expr: expr}, nil
 	}
 	if p.match(IDENTIFIER) {
-		return NewVariableExpression(p.previous()), nil
+		return Variable{p.previous()}, nil
 	}
 	if p.match(THIS) {
 		return This{Keyword: p.previous()}, nil
 	}
-    if p.match(SUPER) {
-        keyword := p.previous()
-        _, err := p.consume(DOT, "expected \".\" after \"super\"")
-        if err != nil {
-            return nil, err
-        }
-        id, err := p.consume(IDENTIFIER, "expected an identifier after 'super.'")
-        if err != nil {
-            return nil, err
-        }
+	if p.match(SUPER) {
+		keyword := p.previous()
+		_, err := p.consume(DOT, "expected \".\" after \"super\"")
+		if err != nil {
+			return nil, err
+		}
+		id, err := p.consume(IDENTIFIER, "expected an identifier after 'super.'")
+		if err != nil {
+			return nil, err
+		}
 
-        return Super{Keyword: keyword, Method: id}, nil
+		return Super{Keyword: keyword, Method: id}, nil
+	}
+    if p.match(ERROR) {
+        e := p.error(p.peek(), p.prev.Lexeme)
+        return nil, e
     }
-	parse_error := p.error(p.peek(), "Expect ")
+	parse_error := p.error(p.peek(), "invalid token")
 
-	return Unary{}, &parse_error
+	return nil, &parse_error
 }
 
 // func (p *Parser) identifier() (Expr, error)
@@ -745,14 +752,22 @@ func (p Parser) check(token_type TokenType) bool {
 	return p.peek().Token_type == token_type
 }
 
+func (p Parser) cur() *Token {
+	return &p.tokens[p.current]
+}
+
 func (p *Parser) advance() Token {
-    for ;; {
-        if !p.IsAtEnd() {
-            p.current += 1
-        }
-        if p.peek().Token_type == ERROR {
-        }
-    }
+	for {
+		if !p.IsAtEnd() {
+            p.prev = p.cur()
+			p.current += 1
+			if p.peek().Token_type == ERROR {
+				fmt.Println(p.peek().Lexeme)
+				continue
+			}
+		}
+		break
+	}
 
 	ret := p.previous()
 
@@ -771,10 +786,10 @@ func (p *Parser) consume(tokenType TokenType, message string) (Token, error) {
 func (p Parser) error(token Token, message string) ParseError {
 	if token.Token_type == EOF {
 		// errorhandling.Report(token.Line, " at end ", message)
-        fmt.Printf("[line %d] Error %s: '%s'\n", token.Line, "at end", message)
+		fmt.Printf("[line %d] Error %s: '%s'\n", token.Line, "at end", message)
 	} else {
 		// errorhandling.Report(token.Line, " at "+token.Lexeme, message)
-        fmt.Printf("[line %d] Error %s: '%s'\n", token.Line, " at ", message)
+		fmt.Printf("[line %d] Error at %s: %s\n", token.Line, token.Lexeme, message)
 	}
 	return NewParseError(message)
 }
@@ -784,7 +799,7 @@ func (p Parser) peek() Token {
 }
 
 func (p Parser) previous() Token {
-	return p.tokens[p.current-1]
+	return *p.prev
 }
 
 func (p Parser) IsAtEnd() bool {
@@ -792,7 +807,7 @@ func (p Parser) IsAtEnd() bool {
 }
 
 func (p Parser) errorAtCurrent() {
-    fmt.Println(p.peek().Lexeme)
+	fmt.Println(p.peek().Lexeme)
 }
 
 type ParseError struct {

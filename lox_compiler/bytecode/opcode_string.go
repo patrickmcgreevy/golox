@@ -15,11 +15,12 @@ func _() {
 	_ = x[OpSubtract-4]
 	_ = x[OpMultiply-5]
 	_ = x[OpDivide-6]
+	_ = x[OpPrint-7]
 }
 
-const _OpCode_name = "OpReturnOpConstantOpNegateOpAddOpSubtractOpMultiplyOpDivide"
+const _OpCode_name = "OpReturnOpConstantOpNegateOpAddOpSubtractOpMultiplyOpDivideOpPrint"
 
-var _OpCode_index = [...]uint8{0, 8, 18, 26, 31, 41, 51, 59}
+var _OpCode_index = [...]uint8{0, 8, 18, 26, 31, 41, 51, 59, 66}
 
 func (i OpCode) String() string {
 	if i >= OpCode(len(_OpCode_index)-1) {

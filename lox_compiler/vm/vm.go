@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"lox-compiler/bytecode"
 	"lox-compiler/compiler"
-    "lox-compiler/debug"
+	"lox-compiler/debug"
 )
 
 type InterpreterResult int
@@ -34,34 +34,34 @@ type RuntimeError struct {
 }
 
 func (e RuntimeError) Error() string {
-    return fmt.Sprintf("encountered a(n) %v error", e.errCode)
+	return fmt.Sprintf("encountered a(n) %v error", e.errCode)
 }
 
-
 func (vm *VirtualMachine) Interpret(s string) InterpreterResult {
-    chunk, err := compiler.Compile(s)
-    if err != nil {
-        fmt.Println(err.Error())
-        return Interpret_Compile_Error
-    }
+    vm.pc = 0
+    c := compiler.Compiler{}
+	chunk, err := c.Compile(s)
+	if err != nil {
+		fmt.Println(err.Error())
+		return Interpret_Compile_Error
+	}
 
-    return vm.run_bytecode(chunk)
+	return vm.run_bytecode(chunk)
 }
 
 func (vm *VirtualMachine) run_bytecode(c *bytecode.Chunk) InterpreterResult {
-    vm.chunk = *c
-    // vm.chunk.Disassemble("main")
+	vm.chunk = *c
 
-    return vm.run()
+	return vm.run()
 }
 
 // This is a performance critical path. There are techniques to speed it up.
 // If you want to learn some of these techniques, look up “direct threaded code”, “jump table”, and “computed goto”.
 func (vm *VirtualMachine) run() InterpreterResult {
-    var err *RuntimeError
-    var inst bytecode.Instruction
+	var err *RuntimeError
+	var inst bytecode.Instruction
 
-    for inst, err = vm.read_inst(); err == nil; inst, err = vm.read_inst() {
+	for inst, err = vm.read_inst(); err == nil; inst, err = vm.read_inst() {
 		debug.Printf("%v", vm.chunk.Values)
 		debug.Printf("%s", inst.String())
 		switch inst.Code {
@@ -75,27 +75,29 @@ func (vm *VirtualMachine) run() InterpreterResult {
 			vm.chunk.Values.Push(vm.read_const(inst))
 		case bytecode.OpNegate:
 			// vm.chunk.Values.Push(-vm.chunk.Values.Pop())
-            vm.chunk.Values[len(vm.chunk.Values)-1] = -vm.chunk.Values[len(vm.chunk.Values)-1]
+			vm.chunk.Values[len(vm.chunk.Values)-1] = -vm.chunk.Values[len(vm.chunk.Values)-1]
 		case bytecode.OpAdd, bytecode.OpSubtract, bytecode.OpMultiply, bytecode.OpDivide:
 			vm.run_binary_op(inst)
+        case bytecode.OpPrint:
+            fmt.Println(vm.chunk.Values.Pop())
 		}
 
 	}
 
-    if err != nil {
-        if err.errCode == outOfBoundsPC {
-            return Interpret_OK
-        }
-        return Interpret_Runtime_Error
-    }
+	if err != nil {
+		if err.errCode == outOfBoundsPC {
+			return Interpret_OK
+		}
+		return Interpret_Runtime_Error
+	}
 
-    return Interpret_OK
+	return Interpret_OK
 }
 
 func (vm *VirtualMachine) read_inst() (bytecode.Instruction, *RuntimeError) {
-    if vm.pc >= len(vm.chunk.InstructionSlice) {
-        return bytecode.Instruction{}, &RuntimeError{errCode: outOfBoundsPC}
-    }
+	if vm.pc >= len(vm.chunk.InstructionSlice) {
+		return bytecode.Instruction{}, &RuntimeError{errCode: outOfBoundsPC}
+	}
 	i := vm.chunk.InstructionSlice[vm.pc]
 	vm.pc += 1
 	return i, nil
@@ -108,6 +110,7 @@ func (vm VirtualMachine) read_const(i bytecode.Instruction) bytecode.Value {
 func (vm *VirtualMachine) run_binary_op(i bytecode.Instruction) {
 	var ret bytecode.Value
 	r, l := vm.chunk.Values.Pop(), vm.chunk.Values.Pop()
+
 
 	switch i.Code {
 	case bytecode.OpAdd:
