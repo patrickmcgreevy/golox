@@ -10,11 +10,12 @@ func _() {
 	var x [1]struct{}
 	_ = x[outOfBoundsPC-0]
 	_ = x[popEmptyStack-1]
+	_ = x[wrongType-2]
 }
 
-const _runtimeErrorCode_name = "out of bounds program counterpop on an empty stack"
+const _runtimeErrorCode_name = "out of bounds program counterpop on an empty stackincorrect type"
 
-var _runtimeErrorCode_index = [...]uint8{0, 29, 50}
+var _runtimeErrorCode_index = [...]uint8{0, 29, 50, 64}
 
 func (i runtimeErrorCode) String() string {
 	if i < 0 || i >= runtimeErrorCode(len(_runtimeErrorCode_index)-1) {

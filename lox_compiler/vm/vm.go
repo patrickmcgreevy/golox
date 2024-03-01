@@ -27,6 +27,8 @@ type runtimeErrorCode int
 const (
 	outOfBoundsPC runtimeErrorCode = iota // out of bounds program counter
 	popEmptyStack                         // pop on an empty stack
+	wrongType                             // incorrect type
+	invalidOpCode                         // invalid OpCode
 )
 
 type RuntimeError struct {
@@ -38,8 +40,8 @@ func (e RuntimeError) Error() string {
 }
 
 func (vm *VirtualMachine) Interpret(s string) InterpreterResult {
-    vm.pc = 0
-    c := compiler.Compiler{}
+	vm.pc = 0
+	c := compiler.Compiler{}
 	chunk, err := c.Compile(s)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -74,12 +76,71 @@ func (vm *VirtualMachine) run() InterpreterResult {
 			// fmt.Println(vm.chunk.Constants[inst.Operands[0]])
 			vm.chunk.Values.Push(vm.read_const(inst))
 		case bytecode.OpNegate:
-			// vm.chunk.Values.Push(-vm.chunk.Values.Pop())
-			vm.chunk.Values[len(vm.chunk.Values)-1] = -vm.chunk.Values[len(vm.chunk.Values)-1]
+			loxInt, ok := vm.chunk.Values[len(vm.chunk.Values)-1].(bytecode.LoxInt)
+			if ok {
+				vm.chunk.Values[len(vm.chunk.Values)-1] = -loxInt
+			} else {
+				vm.chunk.Values[len(vm.chunk.Values)-1] = bytecode.LoxBool(!vm.chunk.Values[len(vm.chunk.Values)-1].Truthy())
+			}
+		case bytecode.OpLess:
+			rInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
+			if !ok {
+				return Interpret_Runtime_Error
+			}
+			lInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
+			if !ok {
+				return Interpret_Runtime_Error
+			}
+			vm.chunk.Values.Push(bytecode.LoxBool(lInt < rInt))
+
+		case bytecode.OpLessEqual:
+			rInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
+			if !ok {
+				return Interpret_Runtime_Error
+			}
+			lInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
+			if !ok {
+				return Interpret_Runtime_Error
+			}
+			vm.chunk.Values.Push(bytecode.LoxBool(lInt <= rInt))
+		case bytecode.OpGreater:
+			rInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
+			if !ok {
+				return Interpret_Runtime_Error
+			}
+			lInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
+			if !ok {
+				return Interpret_Runtime_Error
+			}
+			vm.chunk.Values.Push(bytecode.LoxBool(lInt > rInt))
+		case bytecode.OpGreaterEqual:
+			rInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
+			if !ok {
+				return Interpret_Runtime_Error
+			}
+			lInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
+			if !ok {
+				return Interpret_Runtime_Error
+			}
+			vm.chunk.Values.Push(bytecode.LoxBool(lInt >= rInt))
+		case bytecode.OpEqualEqual:
+			r := vm.chunk.Values.Pop()
+			l := vm.chunk.Values.Pop()
+			vm.chunk.Values.Push(bytecode.LoxBool(l == r))
+		case bytecode.OpNotEqual:
+			r := vm.chunk.Values.Pop()
+			l := vm.chunk.Values.Pop()
+			vm.chunk.Values.Push(bytecode.LoxBool(l != r))
 		case bytecode.OpAdd, bytecode.OpSubtract, bytecode.OpMultiply, bytecode.OpDivide:
-			vm.run_binary_op(inst)
-        case bytecode.OpPrint:
-            fmt.Println(vm.chunk.Values.Pop())
+			err = vm.run_binary_op(inst)
+			if err != nil {
+				return Interpret_Runtime_Error
+			}
+		case bytecode.OpPrint:
+			fmt.Println(vm.chunk.Values.Pop())
+		default:
+			fmt.Println("unknown instruction ", inst.String())
+			return Interpret_Runtime_Error
 		}
 
 	}
@@ -107,21 +168,53 @@ func (vm VirtualMachine) read_const(i bytecode.Instruction) bytecode.Value {
 	return vm.chunk.Constants[i.Operands[0]]
 }
 
-func (vm *VirtualMachine) run_binary_op(i bytecode.Instruction) {
+func (vm *VirtualMachine) run_logical_op(i bytecode.Instruction) *RuntimeError {
 	var ret bytecode.Value
-	r, l := vm.chunk.Values.Pop(), vm.chunk.Values.Pop()
-
+	rVal, lVal := vm.chunk.Values.Pop(), vm.chunk.Values.Pop()
 
 	switch i.Code {
+	case bytecode.OpOr:
+		ret = bytecode.LoxBool(rVal.Truthy() || lVal.Truthy())
 	case bytecode.OpAdd:
-		ret = l + r
-	case bytecode.OpSubtract:
-		ret = l - r
-	case bytecode.OpMultiply:
-		ret = l * r
-	case bytecode.OpDivide:
-		ret = l / r
+		ret = bytecode.LoxBool(rVal.Truthy() || lVal.Truthy())
 	}
 
 	vm.chunk.Values.Push(ret)
+	return nil
+}
+
+func (vm *VirtualMachine) run_binary_op(i bytecode.Instruction) *RuntimeError {
+	var ret bytecode.Value
+	rVal, lVal := vm.chunk.Values.Pop(), vm.chunk.Values.Pop()
+	lInt, lOK := lVal.(bytecode.LoxInt)
+	rInt, rOK := rVal.(bytecode.LoxInt)
+	if !lOK || !rOK {
+		lStr, lOK := lVal.(bytecode.LoxString)
+		rStr, rOK := rVal.(bytecode.LoxString)
+		if (!lOK || !rOK) || i.Code != bytecode.OpAdd {
+			// error!!
+			// Only + supports str and int other sneed int
+			debug.Printf("line[]: expected integers but got (%T, %T)", rVal, lVal)
+			// return fmt.Errorf()
+			return &RuntimeError{errCode: wrongType}
+		} else {
+			ret = lStr + rStr
+		}
+	} else {
+		switch i.Code {
+		case bytecode.OpAdd:
+			ret = lInt + rInt
+		case bytecode.OpSubtract:
+			ret = lInt - rInt
+		case bytecode.OpMultiply:
+			ret = lInt * rInt
+		case bytecode.OpDivide:
+			ret = lInt / rInt
+		default:
+			return &RuntimeError{errCode: invalidOpCode}
+		}
+	}
+
+	vm.chunk.Values.Push(ret)
+	return nil
 }

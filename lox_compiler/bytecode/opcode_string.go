@@ -16,11 +16,19 @@ func _() {
 	_ = x[OpMultiply-5]
 	_ = x[OpDivide-6]
 	_ = x[OpPrint-7]
+	_ = x[OpOr-8]
+	_ = x[OpAnd-9]
+	_ = x[OpLess-10]
+	_ = x[OpGreater-11]
+	_ = x[OpLessEqual-12]
+	_ = x[OpGreaterEqual-13]
+	_ = x[OpEqualEqual-14]
+	_ = x[OpNotEqual-15]
 }
 
-const _OpCode_name = "OpReturnOpConstantOpNegateOpAddOpSubtractOpMultiplyOpDivideOpPrint"
+const _OpCode_name = "OpReturnOpConstantOpNegateOpAddOpSubtractOpMultiplyOpDivideOpPrintOpOrOpAndOpLessOpGreaterOpLessEqualOpGreaterEqualOpEqualEqualOpNotEqual"
 
-var _OpCode_index = [...]uint8{0, 8, 18, 26, 31, 41, 51, 59, 66}
+var _OpCode_index = [...]uint8{0, 8, 18, 26, 31, 41, 51, 59, 66, 70, 75, 81, 90, 101, 115, 127, 137}
 
 func (i OpCode) String() string {
 	if i >= OpCode(len(_OpCode_index)-1) {

@@ -150,6 +150,20 @@ func (c *Compiler) compileAssign(e parser.Assign) *CompilationError {
 }
 
 func (c *Compiler) compileBinary(e parser.Binary) *CompilationError {
+	token_op_mapping := map[parser.TokenType]bytecode.OpCode{
+		parser.OR:            bytecode.OpOr,
+		parser.AND:           bytecode.OpAnd,
+		parser.LESS:          bytecode.OpLess,
+		parser.LESS_EQUAL:    bytecode.OpLessEqual,
+		parser.GREATER:       bytecode.OpGreater,
+		parser.GREATER_EQUAL: bytecode.OpGreaterEqual,
+		parser.EQUAL_EQUAL:   bytecode.OpEqualEqual,
+		parser.BANG_EQUAL:    bytecode.OpNotEqual,
+		parser.PLUS:          bytecode.OpAdd,
+		parser.MINUS:         bytecode.OpSubtract,
+		parser.STAR:          bytecode.OpMultiply,
+		parser.SLASH:         bytecode.OpDivide,
+	}
 	err := c.compileExpr(e.Left)
 	if err != nil {
 		return err
@@ -160,16 +174,24 @@ func (c *Compiler) compileBinary(e parser.Binary) *CompilationError {
 		return err
 	}
 
-	switch e.Operator.Token_type {
-	case parser.PLUS:
-		c.curChunk.AddInst(bytecode.NewAddInst(e.Operator.Line))
-	case parser.MINUS:
-		c.curChunk.AddInst(bytecode.NewSubtractInst(e.Operator.Line))
-	case parser.STAR:
-		c.curChunk.AddInst(bytecode.NewMultiplyInst(e.Operator.Line))
-	case parser.SLASH:
-		c.curChunk.AddInst(bytecode.NewDivideInst(e.Operator.Line))
-	}
+	// switch e.Operator.Token_type {
+	// case parser.PLUS:
+	// 	c.curChunk.AddInst(bytecode.NewAddInst(e.Operator.Line))
+	// case parser.MINUS:
+	// 	c.curChunk.AddInst(bytecode.NewSubtractInst(e.Operator.Line))
+	// case parser.STAR:
+	// 	c.curChunk.AddInst(bytecode.NewMultiplyInst(e.Operator.Line))
+	// case parser.SLASH:
+	// 	c.curChunk.AddInst(bytecode.NewDivideInst(e.Operator.Line))
+	// default:
+	// 	return &CompilationError{err: fmt.Sprintf("unknown token %s", e.Operator.Token_type)}
+	// }
+	c.curChunk.AddInst(
+		bytecode.Instruction{
+			Code:            token_op_mapping[e.Operator.Token_type],
+			SourceLineNumer: e.Operator.Line,
+		},
+	)
 
 	return nil
 }
@@ -187,17 +209,37 @@ func (c *Compiler) compileGrouping(e parser.Grouping) *CompilationError {
 }
 
 func (c *Compiler) compileLiteral(e parser.Literal) *CompilationError {
-	v, ok := e.Value.(float64)
-	if !ok {
-		return &CompilationError{err: "unexpected type"}
+	v, err := bytecode.NewValue(e.Value)
+	if err != nil {
+		return &CompilationError{err: err.Error()}
 	}
-	i := c.curChunk.AddConstant(bytecode.Value(v))
+
+	i := c.curChunk.AddConstant(v)
 	c.curChunk.AddInst(bytecode.NewConstantInst(bytecode.Operand(i), 0))
 	return nil
 }
 
 func (c *Compiler) compileLogical(e parser.Logical) *CompilationError {
-	return &CompilationError{err: "compiling Logical expression is not implemented"}
+	token_op_mapping := map[parser.TokenType]bytecode.OpCode{
+		parser.OR:            bytecode.OpOr,
+		parser.AND:           bytecode.OpAnd,
+		parser.LESS:          bytecode.OpLess,
+		parser.LESS_EQUAL:    bytecode.OpLessEqual,
+		parser.GREATER:       bytecode.OpGreater,
+		parser.GREATER_EQUAL: bytecode.OpGreaterEqual,
+		parser.EQUAL_EQUAL:   bytecode.OpEqualEqual,
+		parser.BANG_EQUAL:    bytecode.OpNotEqual,
+	}
+	c.compileExpr(e.Left)
+	c.compileExpr(e.Right)
+	c.curChunk.AddInst(
+		bytecode.Instruction{
+			Code:            token_op_mapping[e.Operator.Token_type],
+			SourceLineNumer: e.Operator.Line,
+		},
+	)
+
+	return nil
 }
 
 func (c *Compiler) compileUnary(e parser.Unary) *CompilationError {
@@ -206,8 +248,9 @@ func (c *Compiler) compileUnary(e parser.Unary) *CompilationError {
 		return err
 	}
 	switch e.Operator.Token_type {
-	case parser.MINUS:
+	case parser.MINUS, parser.BANG:
 		c.curChunk.AddInst(bytecode.NewNegateInst(e.Operator.Line))
+
 	default:
 		return &CompilationError{err: fmt.Sprintf("expected a unary operator but got %s", e.Operator.Lexeme)}
 	}

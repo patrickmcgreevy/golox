@@ -19,6 +19,14 @@ const (
 	OpMultiply
 	OpDivide
     OpPrint
+    OpOr
+    OpAnd
+    OpLess
+    OpGreater
+    OpLessEqual
+    OpGreaterEqual
+    OpEqualEqual
+    OpNotEqual
 )
 
 type Instruction struct {
