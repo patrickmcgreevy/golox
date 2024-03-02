@@ -97,7 +97,6 @@ func (hashMap *LinearProbingHashMap) Insert(s LoxString, v Value) {
 }
 
 func (hashMap *LinearProbingHashMap) Get(s LoxString) (Value, error) {
-	// initial_i := hashMap.hashFunction.Hash(s) % cap(hashMap.buckets)
     initial_i := hashMap.getIndex(s)
 	i := initial_i
 	for true {
@@ -123,8 +122,8 @@ func (hashMap *LinearProbingHashMap) Delete(s LoxString) {
 	for true {
 		pair := hashMap.buckets[i]
 		if pair.key == s {
-			// return pair.val, nil
             hashMap.buckets[i].key = ""
+            hashMap.loadFactor -= 1 / float64(cap(hashMap.buckets))
             return
 		}
 		i++
@@ -132,7 +131,6 @@ func (hashMap *LinearProbingHashMap) Delete(s LoxString) {
 			i = 0
 		}
 		if i == initial_i {
-			// return nil, fmt.Errorf("%s is not in the map", s)
             return
 		}
 	}

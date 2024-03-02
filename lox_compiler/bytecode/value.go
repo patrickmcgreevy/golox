@@ -77,6 +77,10 @@ func (v *LoxMap) Get(s LoxString) (Value, error) {
     return (*LinearProbingHashMap)(v).Get(s)
 }
 
+func (v *LoxMap) Delete(s LoxString) {
+    (*LinearProbingHashMap)(v).Delete(s)
+}
+
 func (vs ValueSlice) String() string {
 	return fmt.Sprintf("Constants: %v", []Value(vs))
 }
