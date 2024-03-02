@@ -1,23 +1,24 @@
-package vm
+package bytecode
 
 import (
 	"fmt"
-	"lox-compiler/bytecode"
 	"strings"
 )
 
+var loadFactor float64 = 0.5
+
 // Hash function interface
 type Hasher interface {
-	Hash(string) int
+	Hash(LoxString) int
 }
 
-type HashFunction func(string) int
+type HashFunction func(LoxString) int
 
-func (f HashFunction) Hash(s string) int {
+func (f HashFunction) Hash(s LoxString) int {
 	return f(s)
 }
 
-func fvnHash(s string) int {
+func fvnHash(s LoxString) int {
     var hash uint32 = 2166136261
     var prime uint32 = 16777619
 
@@ -32,8 +33,8 @@ func fvnHash(s string) int {
 var FVNHashFunction = HashFunction(fvnHash)
 
 type keyValPair struct {
-	key string
-	val bytecode.Value
+	key LoxString
+	val Value
 }
 
 type LinearProbingHashMap struct {
@@ -44,13 +45,13 @@ type LinearProbingHashMap struct {
 
 func NewLinearProbingHashMap() LinearProbingHashMap {
 	return LinearProbingHashMap{
-		buckets:      make([]keyValPair, 100),
+		buckets:      make([]keyValPair, 1000),
 		loadFactor:   0,
 		hashFunction: FVNHashFunction,
 	}
 }
 
-func (hashMap LinearProbingHashMap) getIndex(s string) int {
+func (hashMap LinearProbingHashMap) getIndex(s LoxString) int {
     return FVNHashFunction.Hash(s) % cap(hashMap.buckets)
 }
 
@@ -67,8 +68,7 @@ func (hashMap LinearProbingHashMap) String() string {
 	return str.String()
 }
 
-func (hashMap *LinearProbingHashMap) Insert(s string, v bytecode.Value) {
-	// i := hashMap.hashFunction.Hash(s) % cap(hashMap.buckets)
+func (hashMap *LinearProbingHashMap) Insert(s LoxString, v Value) {
     i := hashMap.getIndex(s)
 	for true {
 		if hashMap.buckets[i].key == "" || hashMap.buckets[i].key == s {
@@ -84,7 +84,7 @@ func (hashMap *LinearProbingHashMap) Insert(s string, v bytecode.Value) {
 
 	hashMap.loadFactor += 1 / float64(cap(hashMap.buckets))
 	// rehash
-	if hashMap.loadFactor >= 0.5 {
+	if hashMap.loadFactor >= loadFactor {
 		oldBuckets := hashMap.buckets
 		hashMap.buckets = make([]keyValPair, cap(hashMap.buckets)*2)
 		hashMap.loadFactor = 0
@@ -96,7 +96,7 @@ func (hashMap *LinearProbingHashMap) Insert(s string, v bytecode.Value) {
 	}
 }
 
-func (hashMap *LinearProbingHashMap) Get(s string) (bytecode.Value, error) {
+func (hashMap *LinearProbingHashMap) Get(s LoxString) (Value, error) {
 	// initial_i := hashMap.hashFunction.Hash(s) % cap(hashMap.buckets)
     initial_i := hashMap.getIndex(s)
 	i := initial_i
@@ -115,4 +115,25 @@ func (hashMap *LinearProbingHashMap) Get(s string) (bytecode.Value, error) {
 	}
 
 	return nil, nil // unreachable
+}
+
+func (hashMap *LinearProbingHashMap) Delete(s LoxString) {
+    initial_i := hashMap.getIndex(s)
+	i := initial_i
+	for true {
+		pair := hashMap.buckets[i]
+		if pair.key == s {
+			// return pair.val, nil
+            hashMap.buckets[i].key = ""
+            return
+		}
+		i++
+		if i >= cap(hashMap.buckets) {
+			i = 0
+		}
+		if i == initial_i {
+			// return nil, fmt.Errorf("%s is not in the map", s)
+            return
+		}
+	}
 }
