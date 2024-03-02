@@ -16,8 +16,9 @@ func (e CompilationError) Error() string {
 }
 
 type Compiler struct {
-	rootChunk *bytecode.Chunk
-	curChunk  *bytecode.Chunk
+	rootChunk       *bytecode.Chunk
+	curChunk        *bytecode.Chunk
+	InteractiveMode bool
 }
 
 func (c *Compiler) Compile(source string) (*bytecode.Chunk, *CompilationError) {
@@ -115,7 +116,13 @@ func (c *Compiler) compileClass(stmt parser.Class) *CompilationError {
 }
 
 func (c *Compiler) compileExpressionStmt(stmt parser.ExpressionStmt) *CompilationError {
-	return c.compileExpr(stmt.Val)
+    err := c.compileExpr(stmt.Val)
+    if err != nil || !c.InteractiveMode {
+        return err
+    }
+    printInst := bytecode.NewPrintInst(0)
+    c.curChunk.AddInst(printInst)
+    return nil
 }
 
 func (c *Compiler) compileFunction(stmt parser.Function) *CompilationError {

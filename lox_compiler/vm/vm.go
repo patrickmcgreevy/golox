@@ -17,8 +17,9 @@ const (
 )
 
 type VirtualMachine struct {
-	chunk bytecode.Chunk
-	pc    int
+	chunk           bytecode.Chunk
+	pc              int
+	InteractiveMode bool
 }
 
 type runtimeErrorCode int
@@ -42,6 +43,7 @@ func (e RuntimeError) Error() string {
 func (vm *VirtualMachine) Interpret(s string) InterpreterResult {
 	vm.pc = 0
 	c := compiler.Compiler{}
+    c.InteractiveMode = vm.InteractiveMode
 	chunk, err := c.Compile(s)
 	if err != nil {
 		fmt.Println(err.Error())

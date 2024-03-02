@@ -11,6 +11,7 @@ import (
 func repl() {
 	reader := bufio.NewReader(os.Stdin)
     vm := vm.VirtualMachine{}
+    vm.InteractiveMode = true
 
     for ;; {
         fmt.Print("> ")
@@ -19,7 +20,8 @@ func repl() {
             return
         }
 
-        fmt.Println(vm.Interpret(line[:len(line)-1]))
+        // fmt.Println(vm.Interpret(line[:len(line)-1]))
+        vm.Interpret(line[:len(line)-1])
     }
 }
 
