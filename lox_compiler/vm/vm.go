@@ -5,15 +5,7 @@ import (
 	"lox-compiler/bytecode"
 	"lox-compiler/compiler"
 	"lox-compiler/debug"
-)
-
-type InterpreterResult int
-
-//go:generate stringer -type=InterpreterResult
-const (
-	Interpret_OK InterpreterResult = iota
-	Interpret_Compile_Error
-	Interpret_Runtime_Error
+	"strings"
 )
 
 type VirtualMachine struct {
@@ -23,42 +15,48 @@ type VirtualMachine struct {
 	vars            map[bytecode.LoxString]bytecode.Value
 }
 
-type runtimeErrorCode int
 
-//go:generate stringer -type=runtimeErrorCode -linecomment
 const (
-	outOfBoundsPC runtimeErrorCode = iota // out of bounds program counter
-	popEmptyStack                         // pop on an empty stack
-	wrongType                             // incorrect type
-	invalidOpCode                         // invalid OpCode
+	outOfBoundsPC string = "out of bounds program counter"
+	popEmptyStack                  = "pop on an empty stack"
+	wrongType                      = "incorrect type"
+	invalidOpCode                  = "invalid OpCode"
+    expectedInts = "expected two ints"
+    expectedStr = "expected a string"
 )
 
-type RuntimeError struct {
-	errCode runtimeErrorCode
+type InterpreterError struct {
+	interpreterErr string
+    line int
 }
 
-func (e RuntimeError) Error() string {
-	return fmt.Sprintf("encountered a(n) %v error", e.errCode)
-}
-
-func (vm *VirtualMachine) Interpret(s string) InterpreterResult {
-    if vm.vars == nil {
-        vm.vars = make(map[bytecode.LoxString]bytecode.Value)
-
+func (e InterpreterError) Error() string {
+    str := strings.Builder{}
+    if e.line >= 0 {
+        str.WriteString(fmt.Sprintf("[line %d]: ", e.line))
     }
+	str.WriteString(fmt.Sprintf("encountered a(n) %s error", e.interpreterErr))
+
+    return str.String()
+}
+
+func (vm *VirtualMachine) Interpret(s string) *InterpreterError {
+	if vm.vars == nil {
+		vm.vars = make(map[bytecode.LoxString]bytecode.Value)
+
+	}
 	vm.pc = 0
 	c := compiler.Compiler{}
 	c.InteractiveMode = vm.InteractiveMode
 	chunk, err := c.Compile(s)
 	if err != nil {
-		fmt.Println(err.Error())
-		return Interpret_Compile_Error
+        return &InterpreterError{interpreterErr: err.Error(), line: -1}
 	}
 
 	return vm.run_bytecode(chunk)
 }
 
-func (vm *VirtualMachine) run_bytecode(c *bytecode.Chunk) InterpreterResult {
+func (vm *VirtualMachine) run_bytecode(c *bytecode.Chunk) *InterpreterError {
 	vm.chunk = *c
 
 	return vm.run()
@@ -66,8 +64,8 @@ func (vm *VirtualMachine) run_bytecode(c *bytecode.Chunk) InterpreterResult {
 
 // This is a performance critical path. There are techniques to speed it up.
 // If you want to learn some of these techniques, look up “direct threaded code”, “jump table”, and “computed goto”.
-func (vm *VirtualMachine) run() InterpreterResult {
-	var err *RuntimeError
+func (vm *VirtualMachine) run() *InterpreterError {
+	var err *InterpreterError
 	var inst bytecode.Instruction
 
 	for inst, err = vm.read_inst(); err == nil; inst, err = vm.read_inst() {
@@ -76,7 +74,7 @@ func (vm *VirtualMachine) run() InterpreterResult {
 		switch inst.Code {
 		case bytecode.OpReturn:
 			fmt.Println(vm.chunk.Values.Pop())
-			return Interpret_OK
+			return nil
 		case bytecode.OpConstant:
 			// We could define some type aliases and methods on those aliases for each
 			// Instruction type?? Would this be slow as balls? Any good?
@@ -92,42 +90,42 @@ func (vm *VirtualMachine) run() InterpreterResult {
 		case bytecode.OpLess:
 			rInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
 			if !ok {
-				return Interpret_Runtime_Error
+				return &InterpreterError{interpreterErr: expectedInts, line: inst.SourceLineNumer}
 			}
 			lInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
 			if !ok {
-				return Interpret_Runtime_Error
+				return &InterpreterError{interpreterErr: expectedInts, line: inst.SourceLineNumer}
 			}
 			vm.chunk.Values.Push(bytecode.LoxBool(lInt < rInt))
 
 		case bytecode.OpLessEqual:
 			rInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
 			if !ok {
-				return Interpret_Runtime_Error
+				return &InterpreterError{interpreterErr: expectedInts, line: inst.SourceLineNumer}
 			}
 			lInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
 			if !ok {
-				return Interpret_Runtime_Error
+				return &InterpreterError{interpreterErr: expectedInts, line: inst.SourceLineNumer}
 			}
 			vm.chunk.Values.Push(bytecode.LoxBool(lInt <= rInt))
 		case bytecode.OpGreater:
 			rInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
 			if !ok {
-				return Interpret_Runtime_Error
+				return &InterpreterError{interpreterErr: expectedInts, line: inst.SourceLineNumer}
 			}
 			lInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
 			if !ok {
-				return Interpret_Runtime_Error
+				return &InterpreterError{interpreterErr: expectedInts, line: inst.SourceLineNumer}
 			}
 			vm.chunk.Values.Push(bytecode.LoxBool(lInt > rInt))
 		case bytecode.OpGreaterEqual:
 			rInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
 			if !ok {
-				return Interpret_Runtime_Error
+				return &InterpreterError{interpreterErr: expectedInts, line: inst.SourceLineNumer}
 			}
 			lInt, ok := vm.chunk.Values.Pop().(bytecode.LoxInt)
 			if !ok {
-				return Interpret_Runtime_Error
+				return &InterpreterError{interpreterErr: expectedInts, line: inst.SourceLineNumer}
 			}
 			vm.chunk.Values.Push(bytecode.LoxBool(lInt >= rInt))
 		case bytecode.OpEqualEqual:
@@ -141,59 +139,59 @@ func (vm *VirtualMachine) run() InterpreterResult {
 		case bytecode.OpAdd, bytecode.OpSubtract, bytecode.OpMultiply, bytecode.OpDivide:
 			err = vm.run_binary_op(inst)
 			if err != nil {
-				return Interpret_Runtime_Error
+				return err
 			}
 		case bytecode.OpPrint:
 			fmt.Println(vm.chunk.Values.Pop())
 		case bytecode.OpDeclare:
 			//
-            val := vm.chunk.Values.Pop()
-            name, ok := val.(bytecode.LoxString)
-            if !ok {
-                return Interpret_Runtime_Error
-            }
-            vm.vars[name] = nil
-        case bytecode.OpAssign:
-            // pop name
-            name, ok := vm.chunk.Values.Pop().(bytecode.LoxString)
-            if !ok {
-                return Interpret_Runtime_Error
-            }
-            // pop val
-            val := vm.chunk.Values.Pop()
-            vm.vars[name] = val
-        case bytecode.OpLookup:
-            name, ok := vm.chunk.Values.Pop().(bytecode.LoxString)
-            if !ok {
-                return Interpret_Runtime_Error
-            }
-            val, ok := vm.vars[name]
-            if !ok {
-                return Interpret_Runtime_Error
-            }
+			val := vm.chunk.Values.Pop()
+			name, ok := val.(bytecode.LoxString)
+			if !ok {
+				return &InterpreterError{interpreterErr: expectedStr, line: inst.SourceLineNumer}
+			}
+			vm.vars[name] = nil
+		case bytecode.OpAssign:
+			// pop name
+			name, ok := vm.chunk.Values.Pop().(bytecode.LoxString)
+			if !ok {
+				return &InterpreterError{interpreterErr: expectedStr, line: inst.SourceLineNumer}
+			}
+			// pop val
+			val := vm.chunk.Values.Pop()
+			vm.vars[name] = val
+		case bytecode.OpLookup:
+			name, ok := vm.chunk.Values.Pop().(bytecode.LoxString)
+			if !ok {
+				return &InterpreterError{interpreterErr: expectedStr, line: inst.SourceLineNumer}
+			}
+			val, ok := vm.vars[name]
+			if !ok {
+				return &InterpreterError{interpreterErr: fmt.Sprintf("variable %s is not defined in this scope", name), line: inst.SourceLineNumer}
+			}
 
-            vm.chunk.Values.Push(val)
+			vm.chunk.Values.Push(val)
 
 		default:
 			fmt.Println("unknown instruction ", inst.String())
-			return Interpret_Runtime_Error
+			return &InterpreterError{interpreterErr: "unkown instruction", line: inst.SourceLineNumer}
 		}
 
 	}
 
 	if err != nil {
-		if err.errCode == outOfBoundsPC {
-			return Interpret_OK
+		if err.interpreterErr == outOfBoundsPC {
+			return nil
 		}
-		return Interpret_Runtime_Error
+		return &InterpreterError{interpreterErr: outOfBoundsPC, line: inst.SourceLineNumer}
 	}
 
-	return Interpret_OK
+	return nil
 }
 
-func (vm *VirtualMachine) read_inst() (bytecode.Instruction, *RuntimeError) {
+func (vm *VirtualMachine) read_inst() (bytecode.Instruction, *InterpreterError) {
 	if vm.pc >= len(vm.chunk.InstructionSlice) {
-		return bytecode.Instruction{}, &RuntimeError{errCode: outOfBoundsPC}
+		return bytecode.Instruction{}, &InterpreterError{interpreterErr: outOfBoundsPC}
 	}
 	i := vm.chunk.InstructionSlice[vm.pc]
 	vm.pc += 1
@@ -204,7 +202,7 @@ func (vm VirtualMachine) read_const(i bytecode.Instruction) bytecode.Value {
 	return vm.chunk.Constants[i.Operands[0]]
 }
 
-func (vm *VirtualMachine) run_logical_op(i bytecode.Instruction) *RuntimeError {
+func (vm *VirtualMachine) run_logical_op(i bytecode.Instruction) *InterpreterError {
 	var ret bytecode.Value
 	rVal, lVal := vm.chunk.Values.Pop(), vm.chunk.Values.Pop()
 
@@ -219,7 +217,7 @@ func (vm *VirtualMachine) run_logical_op(i bytecode.Instruction) *RuntimeError {
 	return nil
 }
 
-func (vm *VirtualMachine) run_binary_op(i bytecode.Instruction) *RuntimeError {
+func (vm *VirtualMachine) run_binary_op(i bytecode.Instruction) *InterpreterError {
 	var ret bytecode.Value
 	rVal, lVal := vm.chunk.Values.Pop(), vm.chunk.Values.Pop()
 	lInt, lOK := lVal.(bytecode.LoxInt)
@@ -232,7 +230,7 @@ func (vm *VirtualMachine) run_binary_op(i bytecode.Instruction) *RuntimeError {
 			// Only + supports str and int other sneed int
 			debug.Printf("line[]: expected integers but got (%T, %T)", rVal, lVal)
 			// return fmt.Errorf()
-			return &RuntimeError{errCode: wrongType}
+			return &InterpreterError{interpreterErr: wrongType}
 		} else {
 			ret = lStr + rStr
 		}
@@ -247,7 +245,7 @@ func (vm *VirtualMachine) run_binary_op(i bytecode.Instruction) *RuntimeError {
 		case bytecode.OpDivide:
 			ret = lInt / rInt
 		default:
-			return &RuntimeError{errCode: invalidOpCode}
+			return &InterpreterError{interpreterErr: invalidOpCode}
 		}
 	}
 

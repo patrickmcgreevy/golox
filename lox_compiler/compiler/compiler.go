@@ -236,18 +236,6 @@ func (c *Compiler) compileBinary(e parser.Binary) *CompilationError {
 		return err
 	}
 
-	// switch e.Operator.Token_type {
-	// case parser.PLUS:
-	// 	c.curChunk.AddInst(bytecode.NewAddInst(e.Operator.Line))
-	// case parser.MINUS:
-	// 	c.curChunk.AddInst(bytecode.NewSubtractInst(e.Operator.Line))
-	// case parser.STAR:
-	// 	c.curChunk.AddInst(bytecode.NewMultiplyInst(e.Operator.Line))
-	// case parser.SLASH:
-	// 	c.curChunk.AddInst(bytecode.NewDivideInst(e.Operator.Line))
-	// default:
-	// 	return &CompilationError{err: fmt.Sprintf("unknown token %s", e.Operator.Token_type)}
-	// }
 	c.curChunk.AddInst(
 		bytecode.Instruction{
 			Code:            token_op_mapping[e.Operator.Token_type],
