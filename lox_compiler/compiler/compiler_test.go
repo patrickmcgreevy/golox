@@ -24,3 +24,13 @@ func TestCompileGrouping(t *testing.T) {
 
     chunk.Disassemble("main")
 }
+
+func TestCompileVar(t *testing.T) {
+    c := compiler.Compiler{}
+    chunk, err := c.Compile("var a = 1+3;")
+    if err != nil {
+        t.Fatalf("%s", err.Error())
+    }
+
+    chunk.Disassemble("main")
+}

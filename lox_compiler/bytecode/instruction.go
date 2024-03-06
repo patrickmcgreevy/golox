@@ -27,6 +27,9 @@ const (
     OpGreaterEqual
     OpEqualEqual
     OpNotEqual
+    OpDeclare
+    OpAssign
+    OpLookup
 )
 
 type Instruction struct {
@@ -43,9 +46,9 @@ func NewReturnInst(line int) Instruction {
 	return Instruction{Code: OpReturn, SourceLineNumer: line}
 }
 
-func NewConstantInst(val Operand, line int) Instruction {
+func NewConstantInst(constIndex Operand, line int) Instruction {
 	ret := Instruction{Code: OpConstant, SourceLineNumer: line}
-	ret.Operands[0] = val
+	ret.Operands[0] = constIndex
 
 	return ret
 }

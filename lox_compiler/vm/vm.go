@@ -20,6 +20,7 @@ type VirtualMachine struct {
 	chunk           bytecode.Chunk
 	pc              int
 	InteractiveMode bool
+	vars            map[bytecode.LoxString]bytecode.Value
 }
 
 type runtimeErrorCode int
@@ -41,9 +42,13 @@ func (e RuntimeError) Error() string {
 }
 
 func (vm *VirtualMachine) Interpret(s string) InterpreterResult {
+    if vm.vars == nil {
+        vm.vars = make(map[bytecode.LoxString]bytecode.Value)
+
+    }
 	vm.pc = 0
 	c := compiler.Compiler{}
-    c.InteractiveMode = vm.InteractiveMode
+	c.InteractiveMode = vm.InteractiveMode
 	chunk, err := c.Compile(s)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -140,6 +145,35 @@ func (vm *VirtualMachine) run() InterpreterResult {
 			}
 		case bytecode.OpPrint:
 			fmt.Println(vm.chunk.Values.Pop())
+		case bytecode.OpDeclare:
+			//
+            val := vm.chunk.Values.Pop()
+            name, ok := val.(bytecode.LoxString)
+            if !ok {
+                return Interpret_Runtime_Error
+            }
+            vm.vars[name] = nil
+        case bytecode.OpAssign:
+            // pop name
+            name, ok := vm.chunk.Values.Pop().(bytecode.LoxString)
+            if !ok {
+                return Interpret_Runtime_Error
+            }
+            // pop val
+            val := vm.chunk.Values.Pop()
+            vm.vars[name] = val
+        case bytecode.OpLookup:
+            name, ok := vm.chunk.Values.Pop().(bytecode.LoxString)
+            if !ok {
+                return Interpret_Runtime_Error
+            }
+            val, ok := vm.vars[name]
+            if !ok {
+                return Interpret_Runtime_Error
+            }
+
+            vm.chunk.Values.Push(val)
+
 		default:
 			fmt.Println("unknown instruction ", inst.String())
 			return Interpret_Runtime_Error

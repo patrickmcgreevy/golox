@@ -116,13 +116,18 @@ func (c *Compiler) compileClass(stmt parser.Class) *CompilationError {
 }
 
 func (c *Compiler) compileExpressionStmt(stmt parser.ExpressionStmt) *CompilationError {
-    err := c.compileExpr(stmt.Val)
-    if err != nil || !c.InteractiveMode {
-        return err
-    }
-    printInst := bytecode.NewPrintInst(0)
-    c.curChunk.AddInst(printInst)
-    return nil
+	err := c.compileExpr(stmt.Val)
+	if err != nil || !c.InteractiveMode {
+		return err
+	}
+	switch stmt.Val.(type) {
+	case parser.Assign:
+		return nil
+	default:
+		printInst := bytecode.NewPrintInst(0)
+		c.curChunk.AddInst(printInst)
+	}
+	return nil
 }
 
 func (c *Compiler) compileFunction(stmt parser.Function) *CompilationError {
@@ -145,7 +150,39 @@ func (c *Compiler) compileReturn(stmt parser.Return) *CompilationError {
 }
 
 func (c *Compiler) compileVar(stmt parser.Var) *CompilationError {
-	return &CompilationError{err: "compiling `Var` statements is not implemented"}
+	// declare Variable
+	constIndex := c.curChunk.AddConstant(
+		bytecode.LoxString(stmt.Name.Lexeme),
+	)
+	c.curChunk.AddInst(
+		bytecode.NewConstantInst(
+			bytecode.Operand(constIndex),
+			stmt.Name.Line,
+		),
+	)
+	c.curChunk.AddInst(
+		bytecode.Instruction{Code: bytecode.OpDeclare, SourceLineNumer: stmt.Name.Line},
+	)
+
+	// if there's an Initializer
+	// evaluate Initializer
+	if stmt.Initializer != nil {
+		err := c.compileExpr(stmt.Initializer)
+		if err != nil {
+			return err
+		}
+		// assign var to Initializer
+		c.curChunk.AddInst(
+			bytecode.NewConstantInst(
+				bytecode.Operand(constIndex),
+				stmt.Name.Line,
+			),
+		)
+		c.curChunk.AddInst(
+			bytecode.Instruction{Code: bytecode.OpAssign, SourceLineNumer: stmt.Name.Line},
+		)
+	}
+	return nil
 }
 
 func (c *Compiler) compileWhile(stmt parser.While) *CompilationError {
@@ -153,7 +190,25 @@ func (c *Compiler) compileWhile(stmt parser.While) *CompilationError {
 }
 
 func (c *Compiler) compileAssign(e parser.Assign) *CompilationError {
-	return &CompilationError{err: "compiling Assign expression is not implemented"}
+	// return &CompilationError{err: "compiling Assign expression is not implemented"}
+	// expression
+	err := c.compileExpr(e.Value)
+	if err != nil {
+		return err
+	}
+	// store var Name
+	c.curChunk.AddInst(
+		bytecode.NewConstantInst(
+			bytecode.Operand(c.curChunk.AddConstant(
+				bytecode.LoxString(e.Name.Lexeme),
+			)),
+			e.Name.Line,
+		),
+	)
+	// write assign
+	c.curChunk.AddInst(bytecode.Instruction{Code: bytecode.OpAssign, SourceLineNumer: e.Name.Line})
+
+	return nil
 }
 
 func (c *Compiler) compileBinary(e parser.Binary) *CompilationError {
@@ -278,5 +333,17 @@ func (c *Compiler) compileThis(e parser.This) *CompilationError {
 }
 
 func (c *Compiler) compileVariable(e parser.Variable) *CompilationError {
-	return &CompilationError{err: "compiling Variable expression is not implemented"}
+	// return &CompilationError{err: "compiling Variable expression is not implemented"}
+	c.curChunk.AddInst(
+		bytecode.NewConstantInst(
+			bytecode.Operand(c.curChunk.AddConstant(
+				bytecode.LoxString(e.Name.Lexeme),
+			)),
+			e.Name.Line,
+		),
+	)
+	c.curChunk.AddInst(
+		bytecode.Instruction{Code: bytecode.OpLookup, SourceLineNumer: e.Name.Line},
+	)
+	return nil
 }

@@ -20,7 +20,6 @@ func repl() {
             return
         }
 
-        // fmt.Println(vm.Interpret(line[:len(line)-1]))
         vm.Interpret(line[:len(line)-1])
     }
 }
