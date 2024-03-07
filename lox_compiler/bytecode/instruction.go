@@ -6,30 +6,31 @@ import (
 )
 
 type OpCode uint8
-type Operand int
+type Operand uint8
 type OperandArray [1]Operand
 
 //go:generate stringer -type=OpCode
 const (
-	OpReturn OpCode = iota
+	OpAdd OpCode = iota
+	OpAnd
+	OpAssign
 	OpConstant
-	OpNegate
-	OpAdd
-	OpSubtract
-	OpMultiply
+	OpDeclareGlobal
 	OpDivide
-    OpPrint
-    OpOr
-    OpAnd
-    OpLess
-    OpGreater
-    OpLessEqual
-    OpGreaterEqual
-    OpEqualEqual
-    OpNotEqual
-    OpDeclare
-    OpAssign
-    OpLookup
+	OpEqualEqual
+	OpGreater
+	OpGreaterEqual
+	OpLess
+	OpLessEqual
+	OpLookup
+	OpMultiply
+	OpNegate
+	OpNotEqual
+	OpOr
+	OpPrint
+	OpReturn
+	OpSubtract
+    OpPop
 )
 
 type Instruction struct {
@@ -38,8 +39,12 @@ type Instruction struct {
 	SourceLineNumer int
 }
 
+func NewInst(code OpCode, line int) Instruction {
+    return Instruction{Code: code, SourceLineNumer: line}
+}
+
 func NewPrintInst(line int) Instruction {
-    return Instruction{Code: OpPrint, SourceLineNumer: line}
+	return Instruction{Code: OpPrint, SourceLineNumer: line}
 }
 
 func NewReturnInst(line int) Instruction {

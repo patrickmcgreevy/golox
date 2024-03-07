@@ -69,7 +69,6 @@ func (vm *VirtualMachine) run() *InterpreterError {
 	var inst bytecode.Instruction
 
 	for inst, err = vm.read_inst(); err == nil; inst, err = vm.read_inst() {
-		debug.Printf("%v", vm.chunk.Values)
 		debug.Printf("%s", inst.String())
 		switch inst.Code {
 		case bytecode.OpReturn:
@@ -143,7 +142,7 @@ func (vm *VirtualMachine) run() *InterpreterError {
 			}
 		case bytecode.OpPrint:
 			fmt.Println(vm.chunk.Values.Pop())
-		case bytecode.OpDeclare:
+		case bytecode.OpDeclareGlobal:
 			//
 			val := vm.chunk.Values.Pop()
 			name, ok := val.(bytecode.LoxString)
@@ -171,11 +170,14 @@ func (vm *VirtualMachine) run() *InterpreterError {
 			}
 
 			vm.chunk.Values.Push(val)
+        case bytecode.OpPop:
+            vm.chunk.Values.Pop()
 
 		default:
 			fmt.Println("unknown instruction ", inst.String())
 			return &InterpreterError{interpreterErr: "unkown instruction", line: inst.SourceLineNumer}
 		}
+		debug.Printf("%v", vm.chunk.Values)
 
 	}
 

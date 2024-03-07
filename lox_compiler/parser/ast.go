@@ -148,12 +148,12 @@ func (e Class) String() string {
 }
 
 type Block struct {
-	statements []Statement
+	Statements []Statement
 }
 
 func (s Block) String() string {
 	str := strings.Builder{}
-	for _, v := range s.statements {
+	for _, v := range s.Statements {
 		str.WriteString("\n")
 		str.WriteString(v.String())
 	}
@@ -227,7 +227,7 @@ type Var struct {
 }
 
 func (s Var) String() string {
-	return fmt.Sprintf("VAR %s = %s", s.Initializer.String(), s.Name.Lexeme)
+	return fmt.Sprintf("VAR %s = %s", s.Name.Lexeme, s.Initializer.String())
 }
 
 type While struct {

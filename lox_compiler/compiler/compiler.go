@@ -5,6 +5,7 @@ import (
 	"lox-compiler/bytecode"
 	"lox-compiler/debug"
 	"lox-compiler/parser"
+	"math"
 )
 
 type CompilationError struct {
@@ -19,6 +20,20 @@ type Compiler struct {
 	rootChunk       *bytecode.Chunk
 	curChunk        *bytecode.Chunk
 	InteractiveMode bool
+	localCount      int
+	scopeDepth      int
+	locals          [math.MaxInt8]local
+}
+
+// for each chunk, iterate over it and count var declarations
+// Reserve that much space on the value stack
+// for each var declaration in a block, assign it the next available stack offset (starting at 0)
+// when I exit a block in the vm, I need to pop N off the stack...
+// All var lookup instructions need to know the offset, so do all assignments...
+
+type local struct {
+	name  parser.Token
+	depth int
 }
 
 func (c *Compiler) Compile(source string) (*bytecode.Chunk, *CompilationError) {
@@ -108,7 +123,28 @@ func (c *Compiler) compileExpr(e parser.Expr) *CompilationError {
 }
 
 func (c *Compiler) compileBlock(stmt parser.Block) *CompilationError {
-	return &CompilationError{err: "compiling `Block` statements is not implemented"}
+	c.beginScope()
+	defer c.endScope()
+	for _, s := range stmt.Statements {
+		if err := c.compileStmt(s); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Compiler) beginScope() {
+	c.scopeDepth++
+}
+
+func (c *Compiler) endScope() {
+	c.scopeDepth--
+    for c.localCount > 0 && (c.locals[c.localCount-1].depth > c.scopeDepth) {
+        // pop
+        c.curChunk.AddInst(bytecode.NewInst(bytecode.OpPop, -1))
+        c.localCount--
+    }
 }
 
 func (c *Compiler) compileClass(stmt parser.Class) *CompilationError {
@@ -150,7 +186,34 @@ func (c *Compiler) compileReturn(stmt parser.Return) *CompilationError {
 }
 
 func (c *Compiler) compileVar(stmt parser.Var) *CompilationError {
-	// declare Variable
+	if c.scopeDepth > 0 {
+		return c.compileLocalVar(stmt)
+	}
+	return c.compileGlobalVar(stmt)
+}
+
+func (c *Compiler) compileLocalVar(stmt parser.Var) *CompilationError {
+    var local *local
+    for i := c.localCount; i >= 0; i-- {
+        local = &c.locals[i]
+        if local.depth != -1 && local.depth < c.scopeDepth {
+            break
+        }
+        if stmt.Name.Lexeme == local.name.Lexeme {
+            return &CompilationError{err: "already a variable with this name in this scope"}
+        }
+    }
+	// The result of this operation becomes the top of the stack, then
+	// that index of the stack becomes a local variable
+	err := c.compileExpr(stmt.Initializer)
+	if err != nil {
+		return err
+	}
+	return c.addLocal(stmt.Name)
+}
+
+func (c *Compiler) compileGlobalVar(stmt parser.Var) *CompilationError {
+	// declare a global Variable
 	constIndex := c.curChunk.AddConstant(
 		bytecode.LoxString(stmt.Name.Lexeme),
 	)
@@ -161,7 +224,7 @@ func (c *Compiler) compileVar(stmt parser.Var) *CompilationError {
 		),
 	)
 	c.curChunk.AddInst(
-		bytecode.Instruction{Code: bytecode.OpDeclare, SourceLineNumer: stmt.Name.Line},
+		bytecode.Instruction{Code: bytecode.OpDeclareGlobal, SourceLineNumer: stmt.Name.Line},
 	)
 
 	// if there's an Initializer
@@ -183,6 +246,17 @@ func (c *Compiler) compileVar(stmt parser.Var) *CompilationError {
 		)
 	}
 	return nil
+}
+
+func (c *Compiler) addLocal(name parser.Token) *CompilationError {
+    if c.localCount >= math.MaxUint8 {
+        return &CompilationError{err: "too many local variables declared"}
+    }
+	var local *local = &c.locals[c.localCount]
+	c.localCount++
+	local.name = name
+	local.depth = c.scopeDepth
+    return nil
 }
 
 func (c *Compiler) compileWhile(stmt parser.While) *CompilationError {
@@ -321,7 +395,6 @@ func (c *Compiler) compileThis(e parser.This) *CompilationError {
 }
 
 func (c *Compiler) compileVariable(e parser.Variable) *CompilationError {
-	// return &CompilationError{err: "compiling Variable expression is not implemented"}
 	c.curChunk.AddInst(
 		bytecode.NewConstantInst(
 			bytecode.Operand(c.curChunk.AddConstant(

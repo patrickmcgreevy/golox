@@ -57,7 +57,7 @@ func (p *Parser) statement() (Statement, error) {
 		if err != nil {
 			return nil, err
 		}
-		return Block{statements: stmts}, nil
+		return Block{Statements: stmts}, nil
 	}
 
 	if p.match(IF) {
@@ -155,7 +155,7 @@ func (p *Parser) forStatement() (Statement, error) {
 	}
 	if increment_expression != nil {
 		body := []Statement{loop_stmt, ExpressionStmt{increment_expression}}
-		loop_stmt = Block{statements: body}
+		loop_stmt = Block{Statements: body}
 	}
 	if conditional_expr == nil {
 		conditional_expr = Literal{Value: true}
@@ -163,7 +163,7 @@ func (p *Parser) forStatement() (Statement, error) {
 	var body Statement = While{Conditional: conditional_expr, Stmt: loop_stmt}
 	if initializer_stmt != nil {
 		tmp := []Statement{initializer_stmt, body}
-		body = Block{statements: tmp}
+		body = Block{Statements: tmp}
 	}
 
 	return body, nil // for stmt
@@ -402,7 +402,7 @@ func (p *Parser) varDeclaration() (Statement, error) {
 	if p.match(EQUAL) {
 		initializer, err = p.expression()
 	} else {
-		initializer = nil
+		initializer = Literal{Value: nil}
 	}
 
 	if err != nil {
@@ -706,10 +706,10 @@ func (p *Parser) primary() (Expr, error) {
 
 		return Super{Keyword: keyword, Method: id}, nil
 	}
-    if p.match(ERROR) {
-        e := p.error(p.peek(), p.prev.Lexeme)
-        return nil, e
-    }
+	if p.match(ERROR) {
+		e := p.error(p.peek(), p.prev.Lexeme)
+		return nil, e
+	}
 	parse_error := p.error(p.peek(), "invalid token")
 
 	return nil, &parse_error
@@ -759,7 +759,7 @@ func (p Parser) cur() *Token {
 func (p *Parser) advance() Token {
 	for {
 		if !p.IsAtEnd() {
-            p.prev = p.cur()
+			p.prev = p.cur()
 			p.current += 1
 			if p.peek().Token_type == ERROR {
 				fmt.Println(p.peek().Lexeme)
