@@ -11,26 +11,28 @@ type OperandArray [1]Operand
 
 //go:generate stringer -type=OpCode
 const (
-	OpAdd OpCode = iota
-	OpAnd
-	OpAssign
-	OpConstant
-	OpDeclareGlobal
-	OpDivide
-	OpEqualEqual
-	OpGreater
-	OpGreaterEqual
-	OpLess
-	OpLessEqual
-	OpLookup
-	OpMultiply
-	OpNegate
-	OpNotEqual
-	OpOr
-	OpPrint
-	OpReturn
-	OpSubtract
+    OpAdd OpCode = iota
+    OpAnd
+    OpAssign
+    OpConstant
+    OpDeclareGlobal
+    OpDivide
+    OpEqualEqual
+    OpGlobalLookup
+    OpGreater
+    OpGreaterEqual
+    OpLess
+    OpLessEqual
+    OpLocalAssign
+    OpLocalLookup
+    OpMultiply
+    OpNegate
+    OpNotEqual
+    OpOr
     OpPop
+    OpPrint
+    OpReturn
+    OpSubtract
 )
 
 type Instruction struct {

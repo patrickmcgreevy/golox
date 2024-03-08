@@ -140,11 +140,11 @@ func (c *Compiler) beginScope() {
 
 func (c *Compiler) endScope() {
 	c.scopeDepth--
-    for c.localCount > 0 && (c.locals[c.localCount-1].depth > c.scopeDepth) {
-        // pop
-        c.curChunk.AddInst(bytecode.NewInst(bytecode.OpPop, -1))
-        c.localCount--
-    }
+	for c.localCount > 0 && (c.locals[c.localCount-1].depth > c.scopeDepth) {
+		// pop
+		c.curChunk.AddInst(bytecode.NewInst(bytecode.OpPop, -1))
+		c.localCount--
+	}
 }
 
 func (c *Compiler) compileClass(stmt parser.Class) *CompilationError {
@@ -153,15 +153,15 @@ func (c *Compiler) compileClass(stmt parser.Class) *CompilationError {
 
 func (c *Compiler) compileExpressionStmt(stmt parser.ExpressionStmt) *CompilationError {
 	err := c.compileExpr(stmt.Val)
-	if err != nil || !c.InteractiveMode {
+	if err != nil {
 		return err
 	}
-	switch stmt.Val.(type) {
-	case parser.Assign:
-		return nil
-	default:
+
+	if c.InteractiveMode {
 		printInst := bytecode.NewPrintInst(0)
 		c.curChunk.AddInst(printInst)
+	} else {
+		c.curChunk.AddInst(bytecode.NewInst(bytecode.OpPop, 0))
 	}
 	return nil
 }
@@ -186,23 +186,32 @@ func (c *Compiler) compileReturn(stmt parser.Return) *CompilationError {
 }
 
 func (c *Compiler) compileVar(stmt parser.Var) *CompilationError {
+	var err *CompilationError
 	if c.scopeDepth > 0 {
-		return c.compileLocalVar(stmt)
+		err = c.compileLocalVar(stmt)
+	} else {
+		err = c.compileGlobalVar(stmt)
 	}
-	return c.compileGlobalVar(stmt)
+	if err != nil {
+		return err
+	}
+	if c.scopeDepth == 0 {
+		c.curChunk.AddInst(bytecode.NewInst(bytecode.OpPop, stmt.Name.Line))
+	}
+	return nil
 }
 
 func (c *Compiler) compileLocalVar(stmt parser.Var) *CompilationError {
-    var local *local
-    for i := c.localCount; i >= 0; i-- {
-        local = &c.locals[i]
-        if local.depth != -1 && local.depth < c.scopeDepth {
-            break
-        }
-        if stmt.Name.Lexeme == local.name.Lexeme {
-            return &CompilationError{err: "already a variable with this name in this scope"}
-        }
-    }
+	var local *local
+	for i := c.localCount; i >= 0; i-- {
+		local = &c.locals[i]
+		if local.depth != -1 && local.depth < c.scopeDepth {
+			break
+		}
+		if stmt.Name.Lexeme == local.name.Lexeme {
+			return &CompilationError{err: "already a variable with this name in this scope"}
+		}
+	}
 	// The result of this operation becomes the top of the stack, then
 	// that index of the stack becomes a local variable
 	err := c.compileExpr(stmt.Initializer)
@@ -249,14 +258,14 @@ func (c *Compiler) compileGlobalVar(stmt parser.Var) *CompilationError {
 }
 
 func (c *Compiler) addLocal(name parser.Token) *CompilationError {
-    if c.localCount >= math.MaxUint8 {
-        return &CompilationError{err: "too many local variables declared"}
-    }
+	if c.localCount >= math.MaxUint8 {
+		return &CompilationError{err: "too many local variables declared"}
+	}
 	var local *local = &c.locals[c.localCount]
 	c.localCount++
 	local.name = name
 	local.depth = c.scopeDepth
-    return nil
+	return nil
 }
 
 func (c *Compiler) compileWhile(stmt parser.While) *CompilationError {
@@ -264,11 +273,19 @@ func (c *Compiler) compileWhile(stmt parser.While) *CompilationError {
 }
 
 func (c *Compiler) compileAssign(e parser.Assign) *CompilationError {
-	// return &CompilationError{err: "compiling Assign expression is not implemented"}
-	// expression
 	err := c.compileExpr(e.Value)
 	if err != nil {
 		return err
+	}
+	if l, i := c.getLocalVar(e.Name); l != nil {
+		c.curChunk.AddInst(
+			bytecode.Instruction{
+				Code:            bytecode.OpLocalAssign,
+				Operands:        bytecode.OperandArray{bytecode.Operand(i)},
+				SourceLineNumer: e.Name.Line,
+			},
+		)
+		return nil
 	}
 	// store var Name
 	c.curChunk.AddInst(
@@ -395,6 +412,35 @@ func (c *Compiler) compileThis(e parser.This) *CompilationError {
 }
 
 func (c *Compiler) compileVariable(e parser.Variable) *CompilationError {
+	l, i := c.getLocalVar(e.Name)
+	if l != nil {
+		return c.compileLocalLookup(i)
+	}
+	return c.compileGlobalLookup(e)
+}
+
+func (c *Compiler) getLocalVar(name parser.Token) (*local, int) {
+	for i := c.localCount; i >= 0; i-- {
+		if c.locals[i].name.Lexeme == name.Lexeme {
+			return &c.locals[i], i
+		}
+	}
+
+	return nil, -1
+}
+
+func (c *Compiler) compileLocalLookup(index int) *CompilationError {
+	c.curChunk.AddInst(
+		bytecode.Instruction{
+			Code:     bytecode.OpLocalLookup,
+			Operands: bytecode.OperandArray{bytecode.Operand(index)},
+		},
+	)
+
+	return nil
+}
+
+func (c *Compiler) compileGlobalLookup(e parser.Variable) *CompilationError {
 	c.curChunk.AddInst(
 		bytecode.NewConstantInst(
 			bytecode.Operand(c.curChunk.AddConstant(
@@ -404,7 +450,7 @@ func (c *Compiler) compileVariable(e parser.Variable) *CompilationError {
 		),
 	)
 	c.curChunk.AddInst(
-		bytecode.Instruction{Code: bytecode.OpLookup, SourceLineNumer: e.Name.Line},
+		bytecode.Instruction{Code: bytecode.OpGlobalLookup, SourceLineNumer: e.Name.Line},
 	)
 	return nil
 }
