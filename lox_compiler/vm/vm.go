@@ -34,7 +34,7 @@ func (e InterpreterError) Error() string {
 	if e.line >= 0 {
 		str.WriteString(fmt.Sprintf("[line %d]: ", e.line))
 	}
-	str.WriteString(fmt.Sprintf("encountered a(n) %s error", e.interpreterErr))
+    str.WriteString(fmt.Sprintf("encountered an error: %s", e.interpreterErr))
 
 	return str.String()
 }
@@ -189,6 +189,16 @@ func (vm *VirtualMachine) run() *InterpreterError {
 
 		case bytecode.OpPop:
 			vm.chunk.Values.Pop()
+
+        case bytecode.OpConditionalJump:
+            cond := vm.chunk.Values.Pop().Truthy()
+            if !cond {
+                vm.pc += int(vm.chunk.Constants[inst.Operands[1]].(bytecode.LoxInt))
+            } 
+
+        case bytecode.OpJump:
+            vm.pc += int(vm.chunk.Constants[inst.Operands[0]].(bytecode.LoxInt))
+
 
 		default:
 			fmt.Println("unknown instruction ", inst.String())

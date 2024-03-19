@@ -8,12 +8,14 @@ import (
 	"math"
 )
 
+const maxLocals int = math.MaxUint8
+
 type CompilationError struct {
 	err string
 }
 
 func (e CompilationError) Error() string {
-	return fmt.Sprintf("a compilation error ocurred: %s", e.err)
+	return fmt.Sprintf("compilation error: %s", e.err)
 }
 
 type Compiler struct {
@@ -22,14 +24,8 @@ type Compiler struct {
 	InteractiveMode bool
 	localCount      int
 	scopeDepth      int
-	locals          [math.MaxInt8]local
+	locals          [maxLocals]local
 }
-
-// for each chunk, iterate over it and count var declarations
-// Reserve that much space on the value stack
-// for each var declaration in a block, assign it the next available stack offset (starting at 0)
-// when I exit a block in the vm, I need to pop N off the stack...
-// All var lookup instructions need to know the offset, so do all assignments...
 
 type local struct {
 	name  parser.Token
@@ -163,6 +159,7 @@ func (c *Compiler) compileExpressionStmt(stmt parser.ExpressionStmt) *Compilatio
 	} else {
 		c.curChunk.AddInst(bytecode.NewInst(bytecode.OpPop, 0))
 	}
+
 	return nil
 }
 
@@ -171,7 +168,52 @@ func (c *Compiler) compileFunction(stmt parser.Function) *CompilationError {
 }
 
 func (c *Compiler) compileIf(stmt parser.If) *CompilationError {
-	return &CompilationError{err: "compiling `If` statements is not implemented"}
+	// we need to add a two operand instruction here. The first holds the const
+	// index of the "true" jump and the second the index of the "false" jump
+	var curLen, trueJmpOffsetIndex, falseJmpOffsetIndex, falseBlockSizeIndex int
+	trueJmpOffsetIndex = c.curChunk.AddConstant(bytecode.LoxInt(0))
+	falseJmpOffsetIndex = c.curChunk.AddConstant(bytecode.LoxInt(0))
+	falseBlockSizeIndex = c.curChunk.AddConstant(bytecode.LoxInt(0))
+	if err := c.compileExpr(stmt.Conditional); err != nil {
+		return err
+	}
+	c.curChunk.AddInst(
+		bytecode.Instruction{
+			Code: bytecode.OpConditionalJump,
+			Operands: bytecode.OperandArray{
+				bytecode.Operand(trueJmpOffsetIndex),
+				bytecode.Operand(falseJmpOffsetIndex),
+			},
+		},
+	)
+	curLen = len(c.curChunk.InstructionSlice)
+	if err := c.compileStmt(stmt.If_stmt); err != nil {
+		return err
+	}
+    // Skip the "else" statement rather than falling through into it
+    c.curChunk.AddInst(
+        bytecode.Instruction{
+            Code: bytecode.OpJump,
+            Operands: bytecode.OperandArray{
+                bytecode.Operand(falseBlockSizeIndex),
+            },
+        },
+    )
+
+    // backpatch the offsets
+	// c.curChunk.Constants[trueJmpOffsetIndex] = bytecode.LoxInt(0) // The vm increments the pc all on its own.
+	c.curChunk.Constants[falseJmpOffsetIndex] = bytecode.LoxInt(len(c.curChunk.InstructionSlice) - curLen)
+	if stmt.Else_stmt == nil {
+		return nil
+	}
+	curLen = len(c.curChunk.InstructionSlice)
+	if err := c.compileStmt(stmt.Else_stmt); err != nil {
+		return err
+	}
+    // backpatch the "else" jump
+    c.curChunk.Constants[falseBlockSizeIndex] = bytecode.LoxInt(len(c.curChunk.InstructionSlice) - curLen)
+
+	return nil
 }
 
 func (c *Compiler) compilePrint(stmt parser.Print) *CompilationError {
@@ -203,7 +245,7 @@ func (c *Compiler) compileVar(stmt parser.Var) *CompilationError {
 
 func (c *Compiler) compileLocalVar(stmt parser.Var) *CompilationError {
 	var local *local
-	for i := c.localCount; i >= 0; i-- {
+	for i := c.localCount - 1; i >= 0; i-- {
 		local = &c.locals[i]
 		if local.depth != -1 && local.depth < c.scopeDepth {
 			break
@@ -258,7 +300,7 @@ func (c *Compiler) compileGlobalVar(stmt parser.Var) *CompilationError {
 }
 
 func (c *Compiler) addLocal(name parser.Token) *CompilationError {
-	if c.localCount >= math.MaxUint8 {
+	if c.localCount > maxLocals-1 {
 		return &CompilationError{err: "too many local variables declared"}
 	}
 	var local *local = &c.locals[c.localCount]

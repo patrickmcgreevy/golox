@@ -38,3 +38,8 @@ func TestDeclareGlobal(t *testing.T) {
 func TestLocalVars(t *testing.T) {
     test_interp(t, "{var a = 0; var b = 1; a = 2; print a; print b;}")
 }
+
+func TestIfStmt(t *testing.T) {
+    test_interp(t, "if (true)  {print \"true\"; print \"block\";} else {print \"false\"; print \"block\";}")
+    test_interp(t, "if (false) {print \"true\"; print \"block\";} else {print \"false\"; print \"block\";}")
+}

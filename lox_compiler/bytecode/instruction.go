@@ -7,13 +7,14 @@ import (
 
 type OpCode uint8
 type Operand uint8
-type OperandArray [1]Operand
+type OperandArray [2]Operand
 
 //go:generate stringer -type=OpCode
 const (
     OpAdd OpCode = iota
     OpAnd
     OpAssign
+    OpConditionalJump
     OpConstant
     OpDeclareGlobal
     OpDivide
@@ -21,6 +22,7 @@ const (
     OpGlobalLookup
     OpGreater
     OpGreaterEqual
+    OpJump
     OpLess
     OpLessEqual
     OpLocalAssign
