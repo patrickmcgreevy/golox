@@ -87,3 +87,7 @@ func TestIf(t *testing.T) {
     test_compilation(t, "if (true) {print 1;}")
     test_compilation(t, "if (true) {print 1;} else {print 2;}")
 }
+
+func TestWhile(t *testing.T) {
+    test_compilation(t, "while (true) {print 1;}")
+}

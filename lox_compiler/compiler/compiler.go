@@ -171,7 +171,7 @@ func (c *Compiler) compileIf(stmt parser.If) *CompilationError {
 	// we need to add a two operand instruction here. The first holds the const
 	// index of the "true" jump and the second the index of the "false" jump
 	var curLen, falseJmpOffsetIndex, falseBlockSizeIndex int
-	// falseBlockSizeIndex = c.curChunk.AddConstant(bytecode.LoxInt(0))
+
 	if err := c.compileExpr(stmt.Conditional); err != nil {
 		return err
 	}
@@ -184,8 +184,7 @@ func (c *Compiler) compileIf(stmt parser.If) *CompilationError {
     falseBlockSizeIndex = c.addJmp()
 
 	// backpatch the offsets
-	// c.curChunk.Constants[trueJmpOffsetIndex] = bytecode.LoxInt(0) // The vm increments the pc all on its own.
-	c.curChunk.Constants[falseJmpOffsetIndex] = bytecode.LoxInt(len(c.curChunk.InstructionSlice) - curLen)
+    c.backpatchIndex(falseJmpOffsetIndex, len(c.curChunk.InstructionSlice) - curLen)
 	if stmt.Else_stmt == nil {
 		return nil
 	}
@@ -194,7 +193,7 @@ func (c *Compiler) compileIf(stmt parser.If) *CompilationError {
 		return err
 	}
 	// backpatch the "else" jump
-	c.curChunk.Constants[falseBlockSizeIndex] = bytecode.LoxInt(len(c.curChunk.InstructionSlice) - curLen)
+    c.backpatchIndex(falseBlockSizeIndex, len(c.curChunk.InstructionSlice) - curLen)
 
 	return nil
 }
@@ -294,7 +293,19 @@ func (c *Compiler) addLocal(name parser.Token) *CompilationError {
 }
 
 func (c *Compiler) compileWhile(stmt parser.While) *CompilationError {
-	return &CompilationError{err: "compiling `While` statements is not implemented"}
+    curLen := len(c.curChunk.InstructionSlice)
+    if err := c.compileExpr(stmt.Conditional); err != nil {
+        return nil
+    }
+    _, falseJmpOffsetIndex := c.addConditionalJmp()
+    if err := c.compileStmt(stmt.Stmt); err != nil {
+        return nil
+    }
+    whileLoopTopOffsetIndex := c.addJmp()
+    c.backpatchIndex(whileLoopTopOffsetIndex, curLen - len(c.curChunk.InstructionSlice))
+    c.backpatchIndex(falseJmpOffsetIndex, len(c.curChunk.InstructionSlice) - curLen + 1)
+
+    return nil
 }
 
 func (c *Compiler) compileAssign(e parser.Assign) *CompilationError {
@@ -514,4 +525,8 @@ func (c *Compiler) addJmp() (jmpIndex int) {
 	)
 
     return jmpIndex
+}
+
+func (c *Compiler) backpatchIndex(jmpOffsetIndex, val int) {
+	c.curChunk.Constants[jmpOffsetIndex] = bytecode.LoxInt(val)
 }
