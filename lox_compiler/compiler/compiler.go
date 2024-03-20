@@ -170,37 +170,20 @@ func (c *Compiler) compileFunction(stmt parser.Function) *CompilationError {
 func (c *Compiler) compileIf(stmt parser.If) *CompilationError {
 	// we need to add a two operand instruction here. The first holds the const
 	// index of the "true" jump and the second the index of the "false" jump
-	var curLen, trueJmpOffsetIndex, falseJmpOffsetIndex, falseBlockSizeIndex int
-	trueJmpOffsetIndex = c.curChunk.AddConstant(bytecode.LoxInt(0))
-	falseJmpOffsetIndex = c.curChunk.AddConstant(bytecode.LoxInt(0))
-	falseBlockSizeIndex = c.curChunk.AddConstant(bytecode.LoxInt(0))
+	var curLen, falseJmpOffsetIndex, falseBlockSizeIndex int
+	// falseBlockSizeIndex = c.curChunk.AddConstant(bytecode.LoxInt(0))
 	if err := c.compileExpr(stmt.Conditional); err != nil {
 		return err
 	}
-	c.curChunk.AddInst(
-		bytecode.Instruction{
-			Code: bytecode.OpConditionalJump,
-			Operands: bytecode.OperandArray{
-				bytecode.Operand(trueJmpOffsetIndex),
-				bytecode.Operand(falseJmpOffsetIndex),
-			},
-		},
-	)
+    _, falseJmpOffsetIndex = c.addConditionalJmp()
 	curLen = len(c.curChunk.InstructionSlice)
 	if err := c.compileStmt(stmt.If_stmt); err != nil {
 		return err
 	}
-    // Skip the "else" statement rather than falling through into it
-    c.curChunk.AddInst(
-        bytecode.Instruction{
-            Code: bytecode.OpJump,
-            Operands: bytecode.OperandArray{
-                bytecode.Operand(falseBlockSizeIndex),
-            },
-        },
-    )
+	// Skip the "else" statement rather than falling through into it
+    falseBlockSizeIndex = c.addJmp()
 
-    // backpatch the offsets
+	// backpatch the offsets
 	// c.curChunk.Constants[trueJmpOffsetIndex] = bytecode.LoxInt(0) // The vm increments the pc all on its own.
 	c.curChunk.Constants[falseJmpOffsetIndex] = bytecode.LoxInt(len(c.curChunk.InstructionSlice) - curLen)
 	if stmt.Else_stmt == nil {
@@ -210,8 +193,8 @@ func (c *Compiler) compileIf(stmt parser.If) *CompilationError {
 	if err := c.compileStmt(stmt.Else_stmt); err != nil {
 		return err
 	}
-    // backpatch the "else" jump
-    c.curChunk.Constants[falseBlockSizeIndex] = bytecode.LoxInt(len(c.curChunk.InstructionSlice) - curLen)
+	// backpatch the "else" jump
+	c.curChunk.Constants[falseBlockSizeIndex] = bytecode.LoxInt(len(c.curChunk.InstructionSlice) - curLen)
 
 	return nil
 }
@@ -495,4 +478,40 @@ func (c *Compiler) compileGlobalLookup(e parser.Variable) *CompilationError {
 		bytecode.Instruction{Code: bytecode.OpGlobalLookup, SourceLineNumer: e.Name.Line},
 	)
 	return nil
+}
+
+// Define a new conditional jump instruction and return the
+// indicies that we will store the two offsets.
+func (c *Compiler) addConditionalJmp() (trueJmpIndex, falseJmpIndex int) {
+	trueJmpIndex = c.curChunk.AddConstant(bytecode.LoxInt(0))
+	falseJmpIndex = c.curChunk.AddConstant(bytecode.LoxInt(0))
+
+	c.curChunk.AddInst(
+		bytecode.Instruction{
+			Code: bytecode.OpConditionalJump,
+			Operands: bytecode.OperandArray{
+				bytecode.Operand(trueJmpIndex),
+				bytecode.Operand(falseJmpIndex),
+			},
+		},
+	)
+
+    return trueJmpIndex, falseJmpIndex
+}
+
+// Define a new jump instruction and return the
+// index that we will store the offset.
+func (c *Compiler) addJmp() (jmpIndex int) {
+	jmpIndex = c.curChunk.AddConstant(bytecode.LoxInt(0))
+
+	c.curChunk.AddInst(
+		bytecode.Instruction{
+			Code: bytecode.OpJump,
+			Operands: bytecode.OperandArray{
+				bytecode.Operand(jmpIndex),
+			},
+		},
+	)
+
+    return jmpIndex
 }

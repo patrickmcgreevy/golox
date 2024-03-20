@@ -30,7 +30,7 @@ type LoxInt float64
 
 func (v LoxInt) private() {}
 func (v LoxInt) Truthy() bool {
-	return true
+	return v != 0
 }
 
 func (v LoxInt) Val() any {

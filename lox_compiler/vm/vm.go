@@ -199,6 +199,11 @@ func (vm *VirtualMachine) run() *InterpreterError {
         case bytecode.OpJump:
             vm.pc += int(vm.chunk.Constants[inst.Operands[0]].(bytecode.LoxInt))
 
+        case bytecode.OpAnd, bytecode.OpOr:
+            err := vm.run_logical_op(inst)
+            if err != nil {
+                return err
+            }
 
 		default:
 			fmt.Println("unknown instruction ", inst.String())
@@ -238,8 +243,10 @@ func (vm *VirtualMachine) run_logical_op(i bytecode.Instruction) *InterpreterErr
 	switch i.Code {
 	case bytecode.OpOr:
 		ret = bytecode.LoxBool(rVal.Truthy() || lVal.Truthy())
-	case bytecode.OpAdd:
-		ret = bytecode.LoxBool(rVal.Truthy() || lVal.Truthy())
+	case bytecode.OpAnd:
+		ret = bytecode.LoxBool(rVal.Truthy() && lVal.Truthy())
+    default:
+        return &InterpreterError{interpreterErr: "invalid opcode"}
 	}
 
 	vm.chunk.Values.Push(ret)
