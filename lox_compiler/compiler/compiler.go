@@ -164,7 +164,38 @@ func (c *Compiler) compileExpressionStmt(stmt parser.ExpressionStmt) *Compilatio
 }
 
 func (c *Compiler) compileFunction(stmt parser.Function) *CompilationError {
-	return &CompilationError{err: "compiling `Function` statements is not implemented"}
+    newFunc := bytecode.NewLoxFunc()
+	// c.curChunk.AddConstant(newFunc)
+	// newFunc := (*bytecode.LoxFunc)(&c.curChunk.Constants[fooIndex])
+    for _, param := range stmt.Params {
+        newFunc.Args = append(newFunc.Args, bytecode.LoxString(param.Lexeme))
+    }
+
+	defer func(chunk *bytecode.Chunk) {
+		c.curChunk = chunk
+        c.curChunk.AddConstant(newFunc)
+	}(c.curChunk)
+
+	c.curChunk = &newFunc.Body
+
+	for _, param := range stmt.Params {
+		if err := c.checkForNameRedefinition(param); err != nil {
+			return err
+		}
+		// By C-calling-convention, the caller will push the args to the
+		// stack in reverse order.
+		if err := c.addLocal(param); err != nil {
+			return err
+		}
+	}
+
+	for _, s := range stmt.Body {
+		if err := c.compileStmt(s); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *Compiler) compileIf(stmt parser.If) *CompilationError {
@@ -175,16 +206,16 @@ func (c *Compiler) compileIf(stmt parser.If) *CompilationError {
 	if err := c.compileExpr(stmt.Conditional); err != nil {
 		return err
 	}
-    _, falseJmpOffsetIndex = c.addConditionalJmp()
+	_, falseJmpOffsetIndex = c.addConditionalJmp()
 	curLen = len(c.curChunk.InstructionSlice)
 	if err := c.compileStmt(stmt.If_stmt); err != nil {
 		return err
 	}
 	// Skip the "else" statement rather than falling through into it
-    falseBlockSizeIndex = c.addJmp()
+	falseBlockSizeIndex = c.addJmp()
 
 	// backpatch the offsets
-    c.backpatchIndex(falseJmpOffsetIndex, len(c.curChunk.InstructionSlice) - curLen)
+	c.backpatchIndex(falseJmpOffsetIndex, len(c.curChunk.InstructionSlice)-curLen)
 	if stmt.Else_stmt == nil {
 		return nil
 	}
@@ -193,7 +224,7 @@ func (c *Compiler) compileIf(stmt parser.If) *CompilationError {
 		return err
 	}
 	// backpatch the "else" jump
-    c.backpatchIndex(falseBlockSizeIndex, len(c.curChunk.InstructionSlice) - curLen)
+	c.backpatchIndex(falseBlockSizeIndex, len(c.curChunk.InstructionSlice)-curLen)
 
 	return nil
 }
@@ -226,15 +257,8 @@ func (c *Compiler) compileVar(stmt parser.Var) *CompilationError {
 }
 
 func (c *Compiler) compileLocalVar(stmt parser.Var) *CompilationError {
-	var local *local
-	for i := c.localCount - 1; i >= 0; i-- {
-		local = &c.locals[i]
-		if local.depth != -1 && local.depth < c.scopeDepth {
-			break
-		}
-		if stmt.Name.Lexeme == local.name.Lexeme {
-			return &CompilationError{err: "already a variable with this name in this scope"}
-		}
+	if err := c.checkForNameRedefinition(stmt.Name); err != nil {
+		return err
 	}
 	// The result of this operation becomes the top of the stack, then
 	// that index of the stack becomes a local variable
@@ -293,19 +317,19 @@ func (c *Compiler) addLocal(name parser.Token) *CompilationError {
 }
 
 func (c *Compiler) compileWhile(stmt parser.While) *CompilationError {
-    curLen := len(c.curChunk.InstructionSlice)
-    if err := c.compileExpr(stmt.Conditional); err != nil {
-        return nil
-    }
-    _, falseJmpOffsetIndex := c.addConditionalJmp()
-    if err := c.compileStmt(stmt.Stmt); err != nil {
-        return nil
-    }
-    whileLoopTopOffsetIndex := c.addJmp()
-    c.backpatchIndex(whileLoopTopOffsetIndex, curLen - len(c.curChunk.InstructionSlice))
-    c.backpatchIndex(falseJmpOffsetIndex, len(c.curChunk.InstructionSlice) - curLen + 1)
+	curLen := len(c.curChunk.InstructionSlice)
+	if err := c.compileExpr(stmt.Conditional); err != nil {
+		return nil
+	}
+	_, falseJmpOffsetIndex := c.addConditionalJmp()
+	if err := c.compileStmt(stmt.Stmt); err != nil {
+		return nil
+	}
+	whileLoopTopOffsetIndex := c.addJmp()
+	c.backpatchIndex(whileLoopTopOffsetIndex, curLen-len(c.curChunk.InstructionSlice))
+	c.backpatchIndex(falseJmpOffsetIndex, len(c.curChunk.InstructionSlice)-curLen+1)
 
-    return nil
+	return nil
 }
 
 func (c *Compiler) compileAssign(e parser.Assign) *CompilationError {
@@ -507,7 +531,22 @@ func (c *Compiler) addConditionalJmp() (trueJmpIndex, falseJmpIndex int) {
 		},
 	)
 
-    return trueJmpIndex, falseJmpIndex
+	return trueJmpIndex, falseJmpIndex
+}
+
+func (c *Compiler) checkForNameRedefinition(name parser.Token) *CompilationError {
+	var local *local
+	for i := c.localCount - 1; i >= 0; i-- {
+		local = &c.locals[i]
+		if local.depth != -1 && local.depth < c.scopeDepth {
+			break
+		}
+		if name.Lexeme == local.name.Lexeme {
+			return &CompilationError{err: fmt.Sprintf("already a variable named '%s' in this scope", name.Lexeme)}
+		}
+	}
+
+	return nil
 }
 
 // Define a new jump instruction and return the
@@ -524,7 +563,7 @@ func (c *Compiler) addJmp() (jmpIndex int) {
 		},
 	)
 
-    return jmpIndex
+	return jmpIndex
 }
 
 func (c *Compiler) backpatchIndex(jmpOffsetIndex, val int) {

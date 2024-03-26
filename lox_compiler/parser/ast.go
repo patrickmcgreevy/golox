@@ -221,6 +221,7 @@ func (s Return) String() string {
 	return fmt.Sprintf("RETURN %s", s.Return_expr.String())
 }
 
+// Variable declaration statement.
 type Var struct {
 	Initializer Expr
 	Name        Token

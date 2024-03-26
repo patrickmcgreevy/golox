@@ -69,6 +69,27 @@ func (v LoxMap) Truthy() bool {
 	return true
 }
 
+type LoxFunc struct {
+    Args []LoxString
+    Body Chunk
+}
+
+func NewLoxFunc() LoxFunc {
+    return LoxFunc{
+        Args: make([]LoxString, 5),
+        Body: NewChunk(),
+    }
+}
+
+func (LoxFunc) private() {}
+func (LoxFunc) Truthy() bool {
+    return true
+}
+
+func (f LoxFunc) String() string {
+    return fmt.Sprintf("fun %s(%v)", "funky", f.Args)
+}
+
 func (v *LoxMap) Insert(s LoxString, val Value) {
     (*LinearProbingHashMap)(v).Insert(s, val)
 }
