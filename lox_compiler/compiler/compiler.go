@@ -164,17 +164,12 @@ func (c *Compiler) compileExpressionStmt(stmt parser.ExpressionStmt) *Compilatio
 }
 
 func (c *Compiler) compileFunction(stmt parser.Function) *CompilationError {
-    newFunc := bytecode.NewLoxFunc()
-	// c.curChunk.AddConstant(newFunc)
-	// newFunc := (*bytecode.LoxFunc)(&c.curChunk.Constants[fooIndex])
-    for _, param := range stmt.Params {
-        newFunc.Args = append(newFunc.Args, bytecode.LoxString(param.Lexeme))
-    }
+	curChunk := c.curChunk
+	newFunc := bytecode.NewLoxFunc(stmt.Name.Lexeme)
 
-	defer func(chunk *bytecode.Chunk) {
-		c.curChunk = chunk
-        c.curChunk.AddConstant(newFunc)
-	}(c.curChunk)
+	for _, param := range stmt.Params {
+		newFunc.Args = append(newFunc.Args, bytecode.LoxString(param.Lexeme))
+	}
 
 	c.curChunk = &newFunc.Body
 
@@ -194,6 +189,54 @@ func (c *Compiler) compileFunction(stmt parser.Function) *CompilationError {
 			return err
 		}
 	}
+
+	c.curChunk = curChunk
+	funcIndex := c.curChunk.AddConstant(newFunc)
+	c.curChunk.AddInst(bytecode.NewConstantInst(bytecode.Operand(funcIndex), stmt.Name.Line))
+	if c.scopeDepth > 0 {
+		if err := c.checkForNameRedefinition(stmt.Name); err != nil {
+			return err
+		}
+		return c.addLocal(stmt.Name)
+	} else {
+		// compile global
+		// declare a global Variable
+		nameIndex := c.curChunk.AddConstant(
+			bytecode.LoxString(stmt.Name.Lexeme),
+		)
+		c.curChunk.AddInst(
+			bytecode.NewConstantInst(
+				bytecode.Operand(nameIndex),
+				stmt.Name.Line,
+			),
+		)
+		c.curChunk.AddInst(
+			bytecode.Instruction{Code: bytecode.OpDeclareGlobal, SourceLineNumer: stmt.Name.Line},
+		)
+
+		// if there's an Initializer
+		// evaluate Initializer
+		c.curChunk.AddInst(
+			bytecode.NewConstantInst(
+				bytecode.Operand(funcIndex),
+				stmt.Name.Line,
+			),
+		)
+		c.curChunk.AddInst(
+			bytecode.NewConstantInst(
+				bytecode.Operand(nameIndex),
+				stmt.Name.Line,
+			),
+		)
+		c.curChunk.AddInst(
+			bytecode.Instruction{Code: bytecode.OpAssign, SourceLineNumer: stmt.Name.Line},
+		)
+
+		return nil
+	}
+	// if err := c.addLocal(stmt.Name); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
@@ -569,3 +612,11 @@ func (c *Compiler) addJmp() (jmpIndex int) {
 func (c *Compiler) backpatchIndex(jmpOffsetIndex, val int) {
 	c.curChunk.Constants[jmpOffsetIndex] = bytecode.LoxInt(val)
 }
+
+// func (c *Compiler) compileAddVariable(name bytecode.LoxString) *CompilationError {
+// 	if c.scopeDepth > 0 {
+// 		err = c.compileLocalVar(stmt)
+// 	} else {
+// 		err = c.compileGlobalVar(stmt)
+// 	}
+// }

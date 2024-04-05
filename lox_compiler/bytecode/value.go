@@ -70,36 +70,42 @@ func (v LoxMap) Truthy() bool {
 }
 
 type LoxFunc struct {
-    Args []LoxString
-    Body Chunk
+	Args  []LoxString
+	Body  Chunk
+	Name  LoxString
 }
 
-func NewLoxFunc() LoxFunc {
-    return LoxFunc{
-        Args: make([]LoxString, 5),
-        Body: NewChunk(),
-    }
+func NewLoxFunc(name string) LoxFunc {
+	return LoxFunc{
+		Args: make([]LoxString, 5),
+		Body: NewChunk(),
+        Name: LoxString(name),
+	}
 }
 
 func (LoxFunc) private() {}
 func (LoxFunc) Truthy() bool {
-    return true
+	return true
 }
 
 func (f LoxFunc) String() string {
-    return fmt.Sprintf("fun %s(%v)", "funky", f.Args)
+	return fmt.Sprintf("fun %s(%v)",f.Name, f.Args)
+}
+
+func (f LoxFunc) Arity() int {
+    return len(f.Args)
 }
 
 func (v *LoxMap) Insert(s LoxString, val Value) {
-    (*LinearProbingHashMap)(v).Insert(s, val)
+	(*LinearProbingHashMap)(v).Insert(s, val)
 }
 
 func (v *LoxMap) Get(s LoxString) (Value, error) {
-    return (*LinearProbingHashMap)(v).Get(s)
+	return (*LinearProbingHashMap)(v).Get(s)
 }
 
 func (v *LoxMap) Delete(s LoxString) {
-    (*LinearProbingHashMap)(v).Delete(s)
+	(*LinearProbingHashMap)(v).Delete(s)
 }
 
 func (vs ValueSlice) String() string {
